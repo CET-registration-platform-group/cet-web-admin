@@ -1,51 +1,46 @@
-import { ExamInfo, ApiResponse, PaginationResponse, QueryParams } from '@/types';
 import request from './instance';
-import { AxiosRequestConfig } from 'axios';
+import { API_PATHS } from '@/constants/api';
+import type { ExamInfo, ExamInfoQueryParams, ExamInfoListResponse, ExamInfoDetailResponse, CommonResponse } from '@/types/exam-info';
 
 // 获取考试信息列表
-export const getExamInfoList = async (params: QueryParams) => {
-  const config: AxiosRequestConfig = {
-    url: '/exam-info/list',
+export const getExamInfoList = (params: ExamInfoQueryParams) => {
+  return request<ExamInfoListResponse>({
+    url: API_PATHS.ADMIN.EXAM_INFOS.LIST,
     method: 'GET',
     params
-  };
-  return request<ApiResponse<PaginationResponse<ExamInfo>>>(config);
-};
-
-// 获取考试信息详情
-export const getExamInfoById = async (id: number) => {
-  const config: AxiosRequestConfig = {
-    url: `/exam-info/${id}`,
-    method: 'GET'
-  };
-  return request<ApiResponse<ExamInfo>>(config);
+  });
 };
 
 // 创建考试信息
-export const createExamInfo = async (examInfo: Partial<ExamInfo>) => {
-  const config: AxiosRequestConfig = {
-    url: '/exam-info',
+export const createExamInfo = (data: ExamInfo) => {
+  return request<CommonResponse>({
+    url: API_PATHS.ADMIN.EXAM_INFOS.CREATE,
     method: 'POST',
-    data: examInfo
-  };
-  return request<ApiResponse<ExamInfo>>(config);
+    data
+  });
 };
 
 // 更新考试信息
-export const updateExamInfo = async (examInfo: Partial<ExamInfo>) => {
-  const config: AxiosRequestConfig = {
-    url: '/exam-info',
+export const updateExamInfo = (data: ExamInfo) => {
+  return request<CommonResponse>({
+    url: API_PATHS.ADMIN.EXAM_INFOS.UPDATE,
     method: 'PUT',
-    data: examInfo
-  };
-  return request<ApiResponse<ExamInfo>>(config);
+    data
+  });
 };
 
 // 删除考试信息
-export const deleteExamInfo = async (id: number) => {
-  const config: AxiosRequestConfig = {
-    url: `/exam-info/${id}`,
+export const deleteExamInfo = (id: number) => {
+  return request<CommonResponse>({
+    url: API_PATHS.ADMIN.EXAM_INFOS.DELETE(id),
     method: 'DELETE'
-  };
-  return request<ApiResponse<null>>(config);
+  });
+};
+
+// 获取考试信息详情
+export const getExamInfoDetail = (id: number) => {
+  return request<ExamInfoDetailResponse>({
+    url: API_PATHS.ADMIN.EXAM_INFOS.DETAIL(id),
+    method: 'GET'
+  });
 }; 

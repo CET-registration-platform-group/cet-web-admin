@@ -25,15 +25,16 @@
       <el-table
         v-loading="loading"
         :data="tableData"
-        style="width: 100%"
+        style="width: 100%; margin-bottom: 15px;"
         border
         stripe
+        :header-cell-style="{background:'#f5f7fa'}"
       >
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="考点名称" min-width="150" />
+        <el-table-column prop="name" label="考点名称" min-width="120" />
         <el-table-column prop="address" label="地址" min-width="200" />
-        <el-table-column prop="totalSeat" label="座位总数" width="100" />
-        <el-table-column prop="usedSeat" label="已用座位数" width="100" />
+        <el-table-column prop="totalSeat" label="总座位数" width="100" />
+        <el-table-column prop="usedSeat" label="已分配" width="100" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
             <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
@@ -52,11 +53,11 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -81,12 +82,6 @@
         <el-form-item label="地址" prop="address">
           <el-input v-model="form.address" placeholder="请输入地址" />
         </el-form-item>
-        <el-form-item label="座位总数" prop="totalSeat">
-          <el-input-number v-model="form.totalSeat" :min="0" />
-        </el-form-item>
-        <el-form-item label="已用座位数" prop="usedSeat">
-          <el-input-number v-model="form.usedSeat" :min="0" :max="form.totalSeat" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -100,18 +95,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox, FormInstance } from 'element-plus';
-import { ExamSite } from '@/types';
-import { getExamSiteList, createExamSite, updateExamSite, deleteExamSite } from '@/api/examSite';
+import { ElMessage, FormInstance } from 'element-plus';
+import type { ExamSite } from '@/types/exam-site';
+import { getExamSiteList, createExamSite, updateExamSite, deleteExamSite } from '@/api/exam-site';
 
 // 表格数据
 const tableData = ref<ExamSite[]>([]);
 const loading = ref(false);
 
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
+// 查询参数
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  name: ''
+});
+
+// 分页参数
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+});
 
 // 搜索表单
 const searchForm = reactive({
@@ -122,16 +126,13 @@ const searchForm = reactive({
 const formRef = ref<FormInstance>();
 const form = reactive<Partial<ExamSite>>({
   name: '',
-  address: '',
-  totalSeat: 0,
-  usedSeat: 0
+  address: ''
 });
 
 // 表单验证规则
 const rules = {
   name: [{ required: true, message: '请输入考点名称', trigger: 'blur' }],
-  address: [{ required: true, message: '请输入地址', trigger: 'blur' }],
-  totalSeat: [{ required: true, message: '请输入座位总数', trigger: 'blur' }]
+  address: [{ required: true, message: '请输入地址', trigger: 'blur' }]
 };
 
 // 对话框控制
@@ -142,39 +143,20 @@ const dialogType = ref<'add' | 'edit'>('add');
 const loadData = async () => {
   loading.value = true;
   try {
-    const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      name: searchForm.name || undefined
-    };
-    
-    const res = await getExamSiteList(params);
+    const res = await getExamSiteList({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+      name: queryParams.name
+    });
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      if (res.data.records && Array.isArray(res.data.records)) {
-        tableData.value = res.data.records;
-        total.value = res.data.total || 0;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        tableData.value = res.data.items;
-        total.value = res.data.total || 0;
-      } else if (Array.isArray(res.data)) {
-        tableData.value = res.data;
-        total.value = res.data.length;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        tableData.value = [];
-        total.value = 0;
-      }
+      tableData.value = res.data.records;
+      pagination.total = res.data.total;
     } else {
       ElMessage.error(res.message || '获取考点列表失败');
-      tableData.value = [];
-      total.value = 0;
     }
   } catch (error) {
-    console.error('加载考点数据出错:', error);
+    console.error('获取考点列表出错:', error);
     ElMessage.error('获取考点列表失败');
-    tableData.value = [];
-    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -182,25 +164,26 @@ const loadData = async () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
 // 重置搜索
 const resetSearch = () => {
   searchForm.name = '';
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
-// 分页处理
-const handleSizeChange = (val: number) => {
-  pageSize.value = val;
-  loadData();
-};
-
+// 处理分页变化
 const handleCurrentChange = (val: number) => {
-  currentPage.value = val;
+  queryParams.pageNum = val;
+  loadData();
+};
+
+const handleSizeChange = (val: number) => {
+  queryParams.pageSize = val;
+  queryParams.pageNum = 1;
   loadData();
 };
 
@@ -210,8 +193,6 @@ const handleAdd = () => {
   form.id = undefined;
   form.name = '';
   form.address = '';
-  form.totalSeat = 0;
-  form.usedSeat = 0;
   dialogVisible.value = true;
 };
 
@@ -221,9 +202,23 @@ const handleEdit = (row: ExamSite) => {
   form.id = row.id;
   form.name = row.name;
   form.address = row.address;
-  form.totalSeat = row.totalSeat;
-  form.usedSeat = row.usedSeat;
   dialogVisible.value = true;
+};
+
+// 删除考点
+const handleDelete = async (id: number) => {
+  try {
+    const res = await deleteExamSite(id);
+    if (res.code === 200) {
+      ElMessage.success('删除成功');
+      loadData();
+    } else {
+      ElMessage.error(res.message || '删除失败');
+    }
+  } catch (error) {
+    console.error('删除考点出错:', error);
+    ElMessage.error('删除失败');
+  }
 };
 
 // 提交表单
@@ -233,50 +228,22 @@ const submitForm = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        if (dialogType.value === 'add') {
-          const res = await createExamSite(form);
-          if (res.code === 200) {
-            ElMessage.success('添加考点成功');
-            dialogVisible.value = false;
-            loadData();
-          } else {
-            ElMessage.error(res.message || '添加考点失败');
-          }
+        const api = dialogType.value === 'add' ? createExamSite : updateExamSite;
+        const res = await api(form as ExamSite);
+        
+        if (res.code === 200) {
+          ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功');
+          dialogVisible.value = false;
+          loadData();
         } else {
-          const res = await updateExamSite(form);
-          if (res.code === 200) {
-            ElMessage.success('更新考点成功');
-            dialogVisible.value = false;
-            loadData();
-          } else {
-            ElMessage.error(res.message || '更新考点失败');
-          }
+          ElMessage.error(res.message || (dialogType.value === 'add' ? '添加失败' : '更新失败'));
         }
       } catch (error) {
         console.error('提交表单出错:', error);
-        ElMessage.error('操作失败，请重试');
+        ElMessage.error(dialogType.value === 'add' ? '添加失败' : '更新失败');
       }
     }
   });
-};
-
-// 删除考点
-const handleDelete = async (id: number) => {
-  try {
-    const res = await deleteExamSite(id);
-    if (res.code === 200) {
-      ElMessage.success('删除考点成功');
-      if (tableData.value.length === 1 && currentPage.value > 1) {
-        currentPage.value--;
-      }
-      loadData();
-    } else {
-      ElMessage.error(res.message || '删除考点失败');
-    }
-  } catch (error) {
-    console.error('删除考点出错:', error);
-    ElMessage.error('删除考点失败');
-  }
 };
 
 // 初始化
@@ -286,5 +253,28 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 删除局部样式，使用通用样式 */
+.exam-sites-container {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.search-area {
+  margin-bottom: 20px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
 </style> 

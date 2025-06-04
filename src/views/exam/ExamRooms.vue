@@ -11,11 +11,8 @@
       <!-- 搜索区域 -->
       <div class="search-area">
         <el-form :inline="true" :model="searchForm" class="demo-form-inline">
-          <el-form-item label="考场号">
-            <el-input v-model="searchForm.roomNumber" placeholder="输入考场号" clearable />
-          </el-form-item>
           <el-form-item label="考点">
-            <el-select v-model="searchForm.examSiteId" placeholder="选择考点" clearable>
+            <el-select v-model="searchForm.examSiteId" placeholder="选择考点" clearable style="width: 200px">
               <el-option
                 v-for="item in examSiteOptions"
                 :key="item.value"
@@ -23,6 +20,9 @@
                 :value="item.value"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item label="考场号">
+            <el-input v-model="searchForm.roomNumber" placeholder="输入考场号" clearable />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -41,7 +41,11 @@
       >
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="roomNumber" label="考场号" min-width="120" />
-        <el-table-column prop="examSiteName" label="所属考点" min-width="180" />
+        <el-table-column prop="examSiteId" label="所属考点" min-width="180">
+          <template #default="scope">
+            {{ getExamSiteName(scope.row.examSiteId) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
             <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
@@ -60,11 +64,11 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -83,11 +87,8 @@
         :rules="rules"
         label-width="100px"
       >
-        <el-form-item label="考场号" prop="roomNumber">
-          <el-input v-model="form.roomNumber" placeholder="请输入考场号" />
-        </el-form-item>
         <el-form-item label="所属考点" prop="examSiteId">
-          <el-select v-model="form.examSiteId" placeholder="请选择考点" style="width: 100%">
+          <el-select v-model="form.examSiteId" placeholder="请选择考点" style="width: 200px">
             <el-option
               v-for="item in examSiteOptions"
               :key="item.value"
@@ -95,6 +96,9 @@
               :value="item.value"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="考场号" prop="roomNumber">
+          <el-input v-model="form.roomNumber" placeholder="请输入考场号" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -110,18 +114,29 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, FormInstance } from 'element-plus';
-import { ExamRoom, ExamSite } from '@/types';
+import type { ExamRoom, ExamRoomQueryParams } from '@/types/exam-room';
+import type { ExamSite } from '@/types/exam-site';
 import { getExamRoomList, createExamRoom, updateExamRoom, deleteExamRoom } from '@/api/examRoom';
-import { getExamSiteList } from '@/api/examSite';
+import { getAllExamSites } from '@/api/examSite';
 
 // 表格数据
 const tableData = ref<ExamRoom[]>([]);
 const loading = ref(false);
 
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
+// 查询参数
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  examSiteId: undefined as number | undefined,
+  roomNumber: ''
+});
+
+// 分页参数
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+});
 
 // 考点选项
 const examSiteOptions = ref<{ value: number; label: string }[]>([]);
@@ -152,28 +167,14 @@ const dialogType = ref<'add' | 'edit'>('add');
 // 加载考点数据
 const loadExamSites = async () => {
   try {
-    const res = await getExamSiteList({ size: 1000 });
+    const res = await getAllExamSites();
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      if (res.data.records && Array.isArray(res.data.records)) {
-        examSiteOptions.value = res.data.records.map((site: ExamSite) => ({
-          value: site.id,
+      examSiteOptions.value = res.data
+        .filter((site: ExamSite) => site.id !== undefined)
+        .map((site: ExamSite) => ({
+          value: site.id!,
           label: site.name
         }));
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        examSiteOptions.value = res.data.items.map((site: ExamSite) => ({
-          value: site.id,
-          label: site.name
-        }));
-      } else if (Array.isArray(res.data)) {
-        examSiteOptions.value = res.data.map((site: ExamSite) => ({
-          value: site.id,
-          label: site.name
-        }));
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        examSiteOptions.value = [];
-      }
     }
   } catch (error) {
     console.error('加载考点数据出错:', error);
@@ -185,40 +186,21 @@ const loadExamSites = async () => {
 const loadData = async () => {
   loading.value = true;
   try {
-    const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      roomNumber: searchForm.roomNumber || undefined,
-      examSiteId: searchForm.examSiteId
-    };
-    
-    const res = await getExamRoomList(params);
+    const res = await getExamRoomList({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+      examSiteId: queryParams.examSiteId,
+      roomNumber: queryParams.roomNumber
+    });
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      if (res.data.records && Array.isArray(res.data.records)) {
-        tableData.value = res.data.records;
-        total.value = res.data.total || 0;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        tableData.value = res.data.items;
-        total.value = res.data.total || 0;
-      } else if (Array.isArray(res.data)) {
-        tableData.value = res.data;
-        total.value = res.data.length;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        tableData.value = [];
-        total.value = 0;
-      }
+      tableData.value = res.data.records;
+      pagination.total = res.data.total;
     } else {
       ElMessage.error(res.message || '获取考场列表失败');
-      tableData.value = [];
-      total.value = 0;
     }
   } catch (error) {
-    console.error('加载考场数据出错:', error);
+    console.error('获取考场列表出错:', error);
     ElMessage.error('获取考场列表失败');
-    tableData.value = [];
-    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -226,7 +208,7 @@ const loadData = async () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
@@ -234,18 +216,19 @@ const handleSearch = () => {
 const resetSearch = () => {
   searchForm.roomNumber = '';
   searchForm.examSiteId = undefined;
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
-// 分页处理
-const handleSizeChange = (val: number) => {
-  pageSize.value = val;
-  loadData();
-};
-
+// 处理分页变化
 const handleCurrentChange = (val: number) => {
-  currentPage.value = val;
+  queryParams.pageNum = val;
+  loadData();
+};
+
+const handleSizeChange = (val: number) => {
+  queryParams.pageSize = val;
+  queryParams.pageNum = 1;
   loadData();
 };
 
@@ -274,28 +257,26 @@ const submitForm = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        if (dialogType.value === 'add') {
-          const res = await createExamRoom(form);
-          if (res.code === 200) {
-            ElMessage.success('添加考场成功');
-            dialogVisible.value = false;
-            loadData();
-          } else {
-            ElMessage.error(res.message || '添加考场失败');
-          }
+        const examRoom: ExamRoom = {
+          id: form.id,
+          roomNumber: form.roomNumber!,
+          examSiteId: form.examSiteId!
+        };
+        
+        const res = dialogType.value === 'add'
+          ? await createExamRoom(examRoom)
+          : await updateExamRoom(examRoom);
+          
+        if (res.code === 200) {
+          ElMessage.success(dialogType.value === 'add' ? '添加成功' : '更新成功');
+          dialogVisible.value = false;
+          loadData();
         } else {
-          const res = await updateExamRoom(form);
-          if (res.code === 200) {
-            ElMessage.success('更新考场成功');
-            dialogVisible.value = false;
-            loadData();
-          } else {
-            ElMessage.error(res.message || '更新考场失败');
-          }
+          ElMessage.error(res.message || (dialogType.value === 'add' ? '添加失败' : '更新失败'));
         }
       } catch (error) {
         console.error('提交表单出错:', error);
-        ElMessage.error('操作失败，请重试');
+        ElMessage.error(dialogType.value === 'add' ? '添加失败' : '更新失败');
       }
     }
   });
@@ -307,8 +288,8 @@ const handleDelete = async (id: number) => {
     const res = await deleteExamRoom(id);
     if (res.code === 200) {
       ElMessage.success('删除考场成功');
-      if (tableData.value.length === 1 && currentPage.value > 1) {
-        currentPage.value--;
+      if (tableData.value.length === 1 && queryParams.pageNum > 1) {
+        queryParams.pageNum--;
       }
       loadData();
     } else {
@@ -318,6 +299,12 @@ const handleDelete = async (id: number) => {
     console.error('删除考场出错:', error);
     ElMessage.error('删除考场失败');
   }
+};
+
+// 获取考点名称
+const getExamSiteName = (examSiteId: number) => {
+  const site = examSiteOptions.value.find(item => item.value === examSiteId);
+  return site ? site.label : '未知考点';
 };
 
 // 初始化

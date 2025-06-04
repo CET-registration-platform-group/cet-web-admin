@@ -67,11 +67,11 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -132,10 +132,21 @@ import { getStudentList, createStudent, updateStudent, deleteStudent } from '@/a
 const tableData = ref<Student[]>([]);
 const loading = ref(false);
 
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
+// 查询参数
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  name: '',
+  idNumber: '',
+  email: ''
+});
+
+// 分页参数
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+});
 
 // 搜索表单
 const searchForm = reactive({
@@ -186,44 +197,22 @@ const dialogType = ref<'add' | 'edit'>('add');
 const loadData = async () => {
   loading.value = true;
   try {
-    const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      name: searchForm.name || undefined,
-      identityDocumentNumber: searchForm.identityDocumentNumber || undefined
-    };
-    
-    const res = await getStudentList(params);
-    
+    const res = await getStudentList({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+      name: queryParams.name,
+      idNumber: queryParams.idNumber,
+      email: queryParams.email
+    });
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      if (res.data.records && Array.isArray(res.data.records)) {
-        // 后端返回的是 records 字段
-        tableData.value = res.data.records;
-        total.value = res.data.total || 0;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        // 后端返回的是 items 字段
-        tableData.value = res.data.items;
-        total.value = res.data.total || 0;
-      } else if (Array.isArray(res.data)) {
-        // 后端直接返回数组
-        tableData.value = res.data;
-        total.value = res.data.length;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        tableData.value = [];
-        total.value = 0;
-      }
+      tableData.value = res.data.records;
+      pagination.total = res.data.total;
     } else {
       ElMessage.error(res.message || '获取学生列表失败');
-      tableData.value = [];
-      total.value = 0;
     }
   } catch (error) {
-    console.error('加载学生数据出错:', error);
+    console.error('获取学生列表出错:', error);
     ElMessage.error('获取学生列表失败');
-    tableData.value = [];
-    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -231,26 +220,28 @@ const loadData = async () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
 // 重置搜索
 const resetSearch = () => {
-  searchForm.name = '';
-  searchForm.identityDocumentNumber = '';
-  currentPage.value = 1;
+  queryParams.name = '';
+  queryParams.idNumber = '';
+  queryParams.email = '';
+  queryParams.pageNum = 1;
   loadData();
 };
 
-// 分页处理
-const handleSizeChange = (val: number) => {
-  pageSize.value = val;
-  loadData();
-};
-
+// 处理分页变化
 const handleCurrentChange = (val: number) => {
-  currentPage.value = val;
+  queryParams.pageNum = val;
+  loadData();
+};
+
+const handleSizeChange = (val: number) => {
+  queryParams.pageSize = val;
+  queryParams.pageNum = 1;
   loadData();
 };
 
@@ -327,8 +318,8 @@ const handleDelete = async (id: number) => {
     const res = await deleteStudent(id);
     if (res.code === 200) {
       ElMessage.success('删除学生成功');
-      if (tableData.value.length === 1 && currentPage.value > 1) {
-        currentPage.value--;
+      if (tableData.value.length === 1 && queryParams.pageNum > 1) {
+        queryParams.pageNum--;
       }
       loadData();
     } else {

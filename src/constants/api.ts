@@ -101,13 +101,22 @@ export const API_PATHS = {
       DELETE: (id: number) => `/api/admin/users/${id}`,
       DETAIL: (id: number) => `/api/admin/users/${id}`
     },
+    // 学生管理
+    STUDENTS: {
+      LIST: '/api/admin/students',
+      CREATE: '/api/admin/students',
+      UPDATE: '/api/admin/students',
+      DELETE: (id: number) => `/api/admin/students/${id}`,
+      DETAIL: (id: number) => `/api/admin/students/${id}`
+    },
     // 考点管理
     EXAM_SITES: {
       LIST: '/api/admin/exam-sites',
       CREATE: '/api/admin/exam-sites',
       UPDATE: '/api/admin/exam-sites',
       DELETE: (id: number) => `/api/admin/exam-sites/${id}`,
-      DETAIL: (id: number) => `/api/admin/exam-sites/${id}`
+      DETAIL: (id: number) => `/api/admin/exam-sites/${id}`,
+      LIST_ALL: '/api/admin/exam-sites/list'
     },
     // 考场管理
     EXAM_ROOMS: {
@@ -115,7 +124,8 @@ export const API_PATHS = {
       CREATE: '/api/admin/exam-rooms',
       UPDATE: '/api/admin/exam-rooms',
       DELETE: (id: number) => `/api/admin/exam-rooms/${id}`,
-      DETAIL: (id: number) => `/api/admin/exam-rooms/${id}`
+      DETAIL: (id: number) => `/api/admin/exam-rooms/${id}`,
+      LIST_ALL: '/api/admin/exam-rooms/list'
     },
     // 座位管理
     EXAM_SEATS: {
@@ -123,10 +133,12 @@ export const API_PATHS = {
       CREATE: '/api/admin/exam-seats',
       UPDATE: '/api/admin/exam-seats',
       DELETE: (id: number) => `/api/admin/exam-seats/${id}`,
-      DETAIL: (id: number) => `/api/admin/exam-seats/${id}`
+      DETAIL: (id: number) => `/api/admin/exam-seats/${id}`,
+      LIST_ALL: '/api/admin/exam-seats/list',
+      BATCH_CREATE: '/api/admin/exam-seats/batch'
     },
     // 考试信息管理
-    EXAM_INFO: {
+    EXAM_INFOS: {
       LIST: '/api/admin/exam-infos',
       CREATE: '/api/admin/exam-infos',
       UPDATE: '/api/admin/exam-infos',

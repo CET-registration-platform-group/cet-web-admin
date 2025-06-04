@@ -53,11 +53,11 @@
       <!-- 分页 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -112,10 +112,19 @@ import { getUserList, createUser, updateUser, deleteUser } from '@/api/user';
 const tableData = ref<User[]>([]);
 const loading = ref(false);
 
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
+// 查询参数
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  username: ''
+});
+
+// 分页参数
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
+});
 
 // 搜索表单
 const searchForm = reactive({
@@ -163,27 +172,20 @@ const dialogType = ref<'add' | 'edit'>('add');
 const loadData = async () => {
   loading.value = true;
   try {
-    const params = {
-      current: currentPage.value,
-      size: pageSize.value,
-      username: searchForm.username || undefined
-    };
-    
-    const res = await getUserList(params);
-    
+    const res = await getUserList({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+      username: queryParams.username
+    });
     if (res.code === 200) {
       tableData.value = res.data.records;
-      total.value = res.data.total;
+      pagination.total = res.data.total;
     } else {
       ElMessage.error(res.message || '获取用户列表失败');
-      tableData.value = [];
-      total.value = 0;
     }
   } catch (error) {
-    console.error('加载用户数据出错:', error);
+    console.error('获取用户列表出错:', error);
     ElMessage.error('获取用户列表失败');
-    tableData.value = [];
-    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -191,25 +193,26 @@ const loadData = async () => {
 
 // 搜索
 const handleSearch = () => {
-  currentPage.value = 1;
+  queryParams.pageNum = 1;
   loadData();
 };
 
 // 重置搜索
 const resetSearch = () => {
-  searchForm.username = '';
-  currentPage.value = 1;
+  queryParams.username = '';
+  queryParams.pageNum = 1;
   loadData();
 };
 
-// 分页处理
-const handleSizeChange = (val: number) => {
-  pageSize.value = val;
-  loadData();
-};
-
+// 处理分页变化
 const handleCurrentChange = (val: number) => {
-  currentPage.value = val;
+  queryParams.pageNum = val;
+  loadData();
+};
+
+const handleSizeChange = (val: number) => {
+  queryParams.pageSize = val;
+  queryParams.pageNum = 1;
   loadData();
 };
 
@@ -294,8 +297,8 @@ const handleDelete = async (id: number) => {
     const res = await deleteUser(id);
     if (res.code === 200) {
       ElMessage.success('删除用户成功');
-      if (tableData.value.length === 1 && currentPage.value > 1) {
-        currentPage.value--;
+      if (tableData.value.length === 1 && queryParams.pageNum > 1) {
+        queryParams.pageNum--;
       }
       loadData();
     } else {
