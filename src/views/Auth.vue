@@ -46,7 +46,7 @@ const registerFormRules: FormRules = {
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (_: any, value: string, callback: Function) => {
         if (value !== registerForm.value.password) {
           callback(new Error('两次输入密码不一致'))
         } else {

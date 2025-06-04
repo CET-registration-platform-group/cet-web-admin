@@ -7,8 +7,9 @@ export const STORAGE_KEYS = {
 
 // API 相关配置
 export const API_CONFIG = {
-  BASE_URL: '', // 相对路径，便于代理
-  TIMEOUT: 10000, // 10秒
+  // 添加API前缀
+  BASE_URL: '/api',
+  TIMEOUT: import.meta.env.VITE_API_TIMEOUT ? Number(import.meta.env.VITE_API_TIMEOUT) : 10000, // 从环境变量加载超时时间
   DEFAULT_HEADERS: {
     'Content-Type': 'application/json'
   }
@@ -27,14 +28,12 @@ export const RESPONSE_CODE = {
 export const ROUTE_NAMES = {
   AUTH: 'auth',
   DASHBOARD: 'dashboard',
-  PARKING_LOTS: 'parking-lots',
-  PARKING_ZONES: 'parking-zones',
-  PARKING_SPOTS: 'parking-spots',
-  PARKING_RECORDS: 'parking-records',
-  SPOT_MONITOR: 'spot-monitor',
+  EXAM_SITES: 'exam-sites',
+  EXAM_ROOMS: 'exam-rooms',
+  EXAM_SEATS: 'exam-seats',
+  EXAM_INFO: 'exam-info',
+  STUDENTS: 'students',
   DATA_ANALYSIS: 'data-analysis',
-  USERS: 'users',
-  VEHICLES: 'vehicles',
   NOT_FOUND: 'not-found'
 };
 
@@ -43,63 +42,41 @@ export const ROUTE_PATHS = {
   ROOT: '/',
   AUTH: '/auth',
   DASHBOARD: '/dashboard',
-  PARKING_LOTS: '/parking-lots',
-  PARKING_ZONES: '/parking-zones',
-  PARKING_SPOTS: '/parking-spots',
-  PARKING_RECORDS: '/parking-records',
-  SPOT_MONITOR: '/spot-monitor',
-  DATA_ANALYSIS: '/data-analysis',
-  USERS: '/users',
-  VEHICLES: '/vehicles'
+  EXAM_SITES: '/exam-sites',
+  EXAM_ROOMS: '/exam-rooms',
+  EXAM_SEATS: '/exam-seats',
+  EXAM_INFO: '/exam-info',
+  STUDENTS: '/students',
+  DATA_ANALYSIS: '/data-analysis'
 };
 
-// 停车场状态
-export const PARKING_LOT_STATUS = {
+// 考点状态
+export const EXAM_SITE_STATUS = {
   ACTIVE: 'active',
   MAINTENANCE: 'maintenance',
   CLOSED: 'closed'
 };
 
-// 停车位状态
-export const PARKING_SPOT_STATUS = {
-  AVAILABLE: 'available',
-  OCCUPIED: 'occupied',
-  RESERVED: 'reserved',
-  MAINTENANCE: 'maintenance'
+// 考试座位状态
+export const EXAM_SEAT_STATUS = {
+  AVAILABLE: 0, // 未占用
+  OCCUPIED: 1   // 已占用
 };
 
-// 停车位类型
-export const PARKING_SPOT_TYPE = {
-  STANDARD: 'standard',
-  HANDICAPPED: 'handicapped',
-  ELECTRIC: 'electric',
-  COMPACT: 'compact'
+// 考试类型
+export const EXAM_TYPE = {
+  WRITTEN: '笔试',
+  ORAL: '口试'
 };
 
-// 停车记录状态
-export const PARKING_RECORD_STATUS = {
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
+// 考试级别
+export const EXAM_LEVEL = {
+  CET4: '四级',
+  CET6: '六级'
 };
 
-// 支付状态
-export const PAYMENT_STATUS = {
-  UNPAID: 'unpaid',
-  PAID: 'paid',
-  REFUNDED: 'refunded'
-};
-
-// 车辆类型
-export const VEHICLE_TYPE = {
-  CAR: 'car',
-  MOTORCYCLE: 'motorcycle',
-  TRUCK: 'truck',
-  OTHER: 'other'
-};
-
-// 车辆状态
-export const VEHICLE_STATUS = {
-  ACTIVE: 'active',
-  INACTIVE: 'inactive'
+// 证件类型
+export const ID_DOCUMENT_TYPE = {
+  ID_CARD: 0, // 身份证
+  PASSPORT: 1 // 护照
 }; 

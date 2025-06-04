@@ -25,84 +25,69 @@ export interface LoginResponseData {
   user: UserInfo;
 }
 
-// 停车场
-export interface ParkingLot {
+// 考点
+export interface ExamSite {
   id: number;
   name: string;
   address: string;
-  capacity: number;
-  currentOccupancy: number;
-  status: 'active' | 'maintenance' | 'closed';
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+  totalSeat: number;
+  usedSeat: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// 停车区
-export interface ParkingZone {
+// 考场
+export interface ExamRoom {
+  id: number;
+  roomNumber: string;
+  examSiteId: number;
+  examSiteName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// 考试座位
+export interface ExamSeat {
+  id: number;
+  seatNumber: string;
+  examRoomId: number;
+  examRoomNumber?: string;
+  examSiteId?: number;
+  examSiteName?: string;
+  status: number; // 0-未占用，1-占用
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// 学生信息
+export interface Student {
   id: number;
   name: string;
-  parkingLotId: number;
-  parkingLotName?: string;
-  capacity: number;
-  currentOccupancy: number;
-  status: 'active' | 'maintenance' | 'closed';
-  floorLevel?: number;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+  identityDocumentType: number; // 0-身份证，1-护照
+  identityDocumentNumber: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// 停车位
-export interface ParkingSpot {
+// 考试信息
+export interface ExamInfo {
   id: number;
-  spotNumber: string;
-  parkingZoneId: number;
-  parkingZoneName?: string;
-  parkingLotId: number;
-  parkingLotName?: string;
-  status: 'available' | 'occupied' | 'reserved' | 'maintenance';
-  type: 'standard' | 'handicapped' | 'electric' | 'compact';
-  createdAt: string;
-  updatedAt: string;
-}
-
-// 停车记录
-export interface ParkingRecord {
-  id: number;
-  vehicleId: number;
-  vehiclePlate?: string;
-  parkingSpotId: number;
-  spotNumber?: string;
-  parkingZoneId: number;
-  parkingZoneName?: string;
-  parkingLotId: number;
-  parkingLotName?: string;
-  entryTime: string;
-  exitTime?: string;
-  duration?: number;
-  fee?: number;
-  status: 'active' | 'completed' | 'cancelled';
-  paymentStatus?: 'unpaid' | 'paid' | 'refunded';
-  userId: number;
-  username?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// 车辆信息
-export interface Vehicle {
-  id: number;
-  licensePlate: string;
-  make: string;
-  model: string;
-  color: string;
-  userId: number;
-  username?: string;
-  type: 'car' | 'motorcycle' | 'truck' | 'other';
-  status: 'active' | 'inactive';
-  createdAt: string;
-  updatedAt: string;
+  studentId: number;
+  studentName?: string;
+  examSeatId: number;
+  seatNumber?: string;
+  examRoomId?: number;
+  roomNumber?: string;
+  examSiteId?: number;
+  examSiteName?: string;
+  examTime: string;
+  examType: string; // 笔试、口试
+  examLevel: string; // 四级、六级
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // 分页参数
@@ -113,11 +98,15 @@ export interface PaginationParams {
 
 // 分页响应
 export interface PaginationResponse<T> {
-  items: T[];
+  items?: T[];
+  records?: T[];
   total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  page?: number;
+  pageSize?: number;
+  size?: number;
+  current?: number;
+  totalPages?: number;
+  pages?: number;
 }
 
 // 通用查询参数

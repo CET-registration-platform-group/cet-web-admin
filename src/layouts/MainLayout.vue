@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Odometer, 
@@ -25,7 +25,7 @@ const isCollapse = ref(false)
 const isDashboardPage = computed(() => router.currentRoute.value.path === '/dashboard')
 
 // 使用认证hook
-const { currentUser, handleLogout, checkAuthAndRedirect, isLoggedIn } = useAuth()
+const { currentUser, handleLogout, isLoggedIn } = useAuth()
 
 // 计算用户名显示
 const username = computed(() => {
@@ -79,8 +79,8 @@ onBeforeUnmount(() => {
       <!-- 侧边栏 -->
       <el-aside width="auto" class="aside">
         <div class="logo-container">
-          <h1 class="logo" v-if="!isCollapse">停车场管理系统</h1>
-          <h1 class="logo-small" v-else>停</h1>
+          <h1 class="logo" v-if="!isCollapse">CET报名管理系统</h1>
+          <h1 class="logo-small" v-else>CET</h1>
         </div>
         
       <el-menu
@@ -101,35 +101,35 @@ onBeforeUnmount(() => {
           <el-sub-menu index="1">
             <template #title>
               <el-icon><Box /></el-icon>
-              <span>停车场管理</span>
+              <span>考试场地管理</span>
             </template>
-        <el-menu-item index="/parking-lots">
+        <el-menu-item index="/exam-sites">
               <el-icon><List /></el-icon>
-              <span>停车场列表</span>
+              <span>考点管理</span>
             </el-menu-item>
-            <el-menu-item index="/parking-zones">
+            <el-menu-item index="/exam-rooms">
               <el-icon><Share /></el-icon>
-              <span>停车区管理</span>
+              <span>考场管理</span>
             </el-menu-item>
-            <el-menu-item index="/parking-spots">
+            <el-menu-item index="/exam-seats">
               <el-icon><SetUp /></el-icon>
-              <span>停车位管理</span>
+              <span>座位管理</span>
         </el-menu-item>
           </el-sub-menu>
           
-          <el-menu-item index="/parking-records">
+          <el-menu-item index="/exam-info">
             <el-icon><Odometer /></el-icon>
-            <template #title>停车记录</template>
+            <template #title>考试信息</template>
         </el-menu-item>
           
-          <el-menu-item index="/vehicles">
-            <el-icon><LocationInformation /></el-icon>
-            <template #title>车辆管理</template>
-        </el-menu-item>
-          
-          <el-menu-item index="/users">
+          <el-menu-item index="/students">
             <el-icon><User /></el-icon>
-            <template #title>用户管理</template>
+            <template #title>学生管理</template>
+        </el-menu-item>
+          
+          <el-menu-item index="/data-analysis">
+            <el-icon><LocationInformation /></el-icon>
+            <template #title>数据分析</template>
         </el-menu-item>
       </el-menu>
         
@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="header-right">
             <div class="user-info">
-              <el-avatar :size="32" class="avatar">{{ username.charAt(0).toUpperCase() }}</el-avatar>
+              <el-avatar :size="28" class="avatar">{{ username.charAt(0).toUpperCase() }}</el-avatar>
               <el-dropdown trigger="click">
                 <span class="user-dropdown">
                   {{ username }} <el-icon><ArrowDown /></el-icon>
@@ -239,11 +239,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   position: relative;
   z-index: 2;
+  height: 48px;
 }
 
 .header-left h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-primary);
   position: relative;
@@ -256,8 +257,8 @@ onBeforeUnmount(() => {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
+  width: 3px;
+  height: 14px;
   background: var(--primary-color);
   border-radius: 2px;
 }
@@ -265,13 +266,16 @@ onBeforeUnmount(() => {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .avatar {
   background-color: var(--primary-color);
   color: white;
   font-weight: bold;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 14px !important;
 }
 
 .user-dropdown {
@@ -279,9 +283,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-primary);
-  padding: 0 10px;
+  padding: 0 8px;
   transition: all 0.3s;
 }
 
@@ -293,7 +297,7 @@ onBeforeUnmount(() => {
   background-color: #f5f7fa;
   padding: 0;
   overflow: auto;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 48px);
 }
 
 .collapse-btn {

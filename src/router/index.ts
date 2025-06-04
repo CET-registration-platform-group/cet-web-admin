@@ -3,12 +3,6 @@ import authUtils from '@/utils/auth'
 import { ROUTE_PATHS, ROUTE_NAMES } from '@/constants'
 import { STORAGE_KEYS } from '@/constants'
 
-// 定义路由元数据类型
-interface RouteMeta {
-  title?: string;
-  requiresAuth?: boolean;
-}
-
 // 扩展Vue Router的RouteMeta接口
 declare module 'vue-router' {
   interface RouteMeta {
@@ -33,6 +27,7 @@ const router = createRouter({
     {
       path: '/main',
       component: () => import('../layouts/MainLayout.vue'),
+      redirect: ROUTE_PATHS.DASHBOARD,
       children: [
         {
           path: ROUTE_PATHS.DASHBOARD,
@@ -40,33 +35,33 @@ const router = createRouter({
           component: () => import('../views/Dashboard.vue'),
           meta: { title: '首页', requiresAuth: true }
         },
-        // 停车场管理
+        // 考点管理
         {
-          path: ROUTE_PATHS.PARKING_LOTS,
-          name: ROUTE_NAMES.PARKING_LOTS,
-          component: () => import('../views/parking/ParkingLots.vue'),
-          meta: { title: '停车场管理', requiresAuth: true }
+          path: ROUTE_PATHS.EXAM_SITES,
+          name: ROUTE_NAMES.EXAM_SITES,
+          component: () => import('../views/exam/ExamSites.vue'),
+          meta: { title: '考点管理', requiresAuth: true }
         },
-        // 停车区管理
+        // 考场管理
         {
-          path: ROUTE_PATHS.PARKING_ZONES,
-          name: ROUTE_NAMES.PARKING_ZONES,
-          component: () => import('../views/parking/ParkingZones.vue'),
-          meta: { title: '停车区管理', requiresAuth: true }
+          path: ROUTE_PATHS.EXAM_ROOMS,
+          name: ROUTE_NAMES.EXAM_ROOMS,
+          component: () => import('../views/exam/ExamRooms.vue'),
+          meta: { title: '考场管理', requiresAuth: true }
         },
-        // 停车位管理
+        // 座位管理
         {
-          path: ROUTE_PATHS.PARKING_SPOTS,
-          name: ROUTE_NAMES.PARKING_SPOTS,
-          component: () => import('../views/parking/ParkingSpots.vue'),
-          meta: { title: '停车位管理', requiresAuth: true }
+          path: ROUTE_PATHS.EXAM_SEATS,
+          name: ROUTE_NAMES.EXAM_SEATS,
+          component: () => import('../views/exam/ExamSeats.vue'),
+          meta: { title: '考试座位管理', requiresAuth: true }
         },
-        // 停车位实时监控
+        // 考试信息管理
         {
-          path: ROUTE_PATHS.SPOT_MONITOR,
-          name: ROUTE_NAMES.SPOT_MONITOR,
-          component: () => import('../views/parking/SpotMonitor.vue'),
-          meta: { title: '停车位监控', requiresAuth: true }
+          path: ROUTE_PATHS.EXAM_INFO,
+          name: ROUTE_NAMES.EXAM_INFO,
+          component: () => import('../views/exam/ExamInfo.vue'),
+          meta: { title: '考试信息管理', requiresAuth: true }
         },
         // 数据统计分析
         {
@@ -75,26 +70,12 @@ const router = createRouter({
           component: () => import('../views/statistics/DataAnalysis.vue'),
           meta: { title: '数据分析', requiresAuth: true }
         },
-        // 停车记录管理
+        // 学生管理
         {
-          path: ROUTE_PATHS.PARKING_RECORDS,
-          name: ROUTE_NAMES.PARKING_RECORDS,
-          component: () => import('../views/parking/ParkingRecords.vue'),
-          meta: { title: '停车记录', requiresAuth: true }
-        },
-        // 用户管理
-        {
-          path: ROUTE_PATHS.USERS,
-          name: ROUTE_NAMES.USERS,
-          component: () => import('../views/user/Users.vue'),
-          meta: { title: '用户管理', requiresAuth: true }
-        },
-        // 车辆管理
-        {
-          path: ROUTE_PATHS.VEHICLES,
-          name: ROUTE_NAMES.VEHICLES,
-          component: () => import('../views/vehicle/Vehicles.vue'),
-          meta: { title: '车辆管理', requiresAuth: true }
+          path: ROUTE_PATHS.STUDENTS,
+          name: ROUTE_NAMES.STUDENTS,
+          component: () => import('../views/student/Students.vue'),
+          meta: { title: '学生管理', requiresAuth: true }
         }
       ]
     },
@@ -104,30 +85,17 @@ const router = createRouter({
       name: ROUTE_NAMES.NOT_FOUND,
       component: () => import('../views/NotFound.vue'),
       meta: { title: '页面不存在', requiresAuth: false }
-        }
-      ]
+    }
+  ]
 })
-
-// 在应用启动时初始化认证状态
-authUtils.initializeAuth();
 
 // 添加全局前置守卫，处理认证和授权
 router.beforeEach((to, from, next) => {
-  console.log(`路由变化: 从 ${from.path} 到 ${to.path}`);
-  
-  // 检查存储中的登录状态和token
-  const localLoggedIn = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN) === 'true';
-  const sessionLoggedIn = sessionStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN) === 'true';
-  const localToken = !!localStorage.getItem(STORAGE_KEYS.TOKEN);
-  const sessionToken = !!sessionStorage.getItem(STORAGE_KEYS.TOKEN);
-  
   // 判断页面是否需要认证
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false);
   
   // 使用认证工具检查登录状态
   const isAuthenticated = authUtils.checkIsLoggedIn();
-  
-  console.log(`路由守卫: 路径=${to.path}, localStorage登录=${localLoggedIn}, sessionStorage登录=${sessionLoggedIn}, localToken=${localToken}, sessionToken=${sessionToken}, 认证状态=${isAuthenticated}`);
   
   // 处理根路径
   if (to.path === ROUTE_PATHS.ROOT) {
@@ -137,23 +105,21 @@ router.beforeEach((to, from, next) => {
   
   // 如果需要认证但未认证，重定向到登录页
   if (requiresAuth && !isAuthenticated) {
-    console.log('需要认证但未登录，重定向到登录页');
     next(ROUTE_PATHS.AUTH);
     return;
   }
   
   // 如果已认证但访问登录页，重定向到首页
   if (isAuthenticated && to.path === ROUTE_PATHS.AUTH) {
-    console.log('已登录但访问登录页，重定向到首页');
     next(ROUTE_PATHS.DASHBOARD);
     return;
   }
   
   // 设置页面标题
   if (to.meta.title) {
-    document.title = `${to.meta.title} - 停车场管理系统`;
+    document.title = `${to.meta.title} - CET报名管理系统`;
   } else {
-    document.title = '停车场管理系统';
+    document.title = 'CET报名管理系统';
   }
   
   // 允许访问请求的页面

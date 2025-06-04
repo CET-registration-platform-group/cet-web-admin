@@ -1,52 +1,51 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Odometer, User, LocationInformation, Box, Share, SetUp, Van } from '@element-plus/icons-vue'
-import axios from 'axios'
-import authUtils from '@/utils/auth'
+import { LocationInformation, Box, User, Calendar } from '@element-plus/icons-vue'
+import request from '@/api/instance'
 
-interface ParkingLot {
+interface ExamSite {
   id: number
-  lotName: string
-  totalSpot: number
-  usedSpot: number
+  name: string
+  totalSeats: number
+  usedSeats: number
 }
 
-interface ParkingRecord {
+interface ExamInfo {
   id: number
-  entryTime: string
-  exitTime: string | null
-  plateNumber: string
+  examTime: string
+  studentName: string
+  examLevel: string
 }
 
 interface DashboardData {
-  totalParkingLots: number
-  totalParkingSpots: number
-  currentUsedSpots: number
-  registeredVehicles: number
-  parkingLotOccupancies: ParkingLot[]
-  recentParkingRecords: ParkingRecord[]
+  totalExamSites: number
+  totalExamSeats: number
+  registeredStudents: number
+  upcomingExams: number
+  examSiteOccupancies: ExamSite[]
+  recentExamRegistrations: ExamInfo[]
 }
 
 // 数据统计
 const stats = ref([
-  { id: 1, label: '总停车场数', value: 0, icon: Box, color: '#3a7bd5' },
-  { id: 2, label: '总车位数', value: 0, icon: LocationInformation, color: '#00d2ff' },
-  { id: 3, label: '当前使用数', value: 0, icon: LocationInformation, color: '#e6a23c' },
-  { id: 4, label: '注册车辆数', value: 0, icon: Van, color: '#67c23a' }
+  { id: 1, label: '考点总数', value: 0, icon: Box, color: '#3a7bd5' },
+  { id: 2, label: '座位总数', value: 0, icon: LocationInformation, color: '#00d2ff' },
+  { id: 3, label: '注册学生数', value: 0, icon: User, color: '#67c23a' },
+  { id: 4, label: '即将考试数', value: 0, icon: Calendar, color: '#e6a23c' }
 ])
 
-// 最近停车记录
-const parkingRecords = ref<Array<{
+// 最近报名记录
+const examRegistrations = ref<Array<{
   id: number
   time: string
-  plateNumber: string
-  action: string
-  location: string
+  studentName: string
+  examLevel: string
+  examSite: string
   status: string
 }>>([])
 
-// 停车场占用率数据
-const parkingLots = ref<Array<{
+// 考点座位占用率数据
+const examSites = ref<Array<{
   id: number
   name: string
   capacity: number
@@ -58,38 +57,37 @@ const parkingLots = ref<Array<{
 // 获取仪表盘数据
 const fetchDashboardData = async () => {
   try {
-    const token = authUtils.getToken();
-    const response = await axios.get<{ data: DashboardData }>('/api/dashboard', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await request<{ data: DashboardData }>({
+      url: '/api/dashboard',
+      method: 'get'
     })
-    const data = response.data.data
+    
+    const data = response.data
     
     // 更新统计数据
-    stats.value[0].value = data.totalParkingLots
-    stats.value[1].value = data.totalParkingSpots
-    stats.value[2].value = data.currentUsedSpots
-    stats.value[3].value = data.registeredVehicles
+    stats.value[0].value = data.totalExamSites
+    stats.value[1].value = data.totalExamSeats
+    stats.value[2].value = data.registeredStudents
+    stats.value[3].value = data.upcomingExams
     
-    // 更新停车场占用率数据
-    parkingLots.value = data.parkingLotOccupancies.map((lot: ParkingLot) => ({
-      id: lot.id,
-      name: lot.lotName,
-      capacity: lot.totalSpot,
-      occupied: lot.usedSpot,
-      available: lot.totalSpot - lot.usedSpot,
+    // 更新考点占用率数据
+    examSites.value = data.examSiteOccupancies.map((site: ExamSite) => ({
+      id: site.id,
+      name: site.name,
+      capacity: site.totalSeats,
+      occupied: site.usedSeats,
+      available: site.totalSeats - site.usedSeats,
       status: 'active'
     }))
     
-    // 更新最近停车记录
-    parkingRecords.value = data.recentParkingRecords.map((record: ParkingRecord) => ({
+    // 更新最近报名记录
+    examRegistrations.value = data.recentExamRegistrations.map((record: ExamInfo) => ({
       id: record.id,
-      time: new Date(record.entryTime).toLocaleTimeString(),
-      plateNumber: record.plateNumber,
-      action: record.exitTime ? '出场' : '入场',
-      location: '停车场',
-      status: record.exitTime ? 'info' : 'success'
+      time: new Date(record.examTime).toLocaleDateString(),
+      studentName: record.studentName,
+      examLevel: record.examLevel,
+      examSite: '待分配',
+      status: 'success'
     }))
   } catch (error) {
     console.error('获取仪表盘数据失败:', error)
@@ -102,7 +100,7 @@ const refreshData = () => {
 }
 
 onMounted(() => {
-  document.title = '首页 - 停车场管理系统'
+  document.title = '首页 - CET报名管理系统'
   fetchDashboardData()
 })
 </script>
@@ -131,33 +129,33 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 停车场占用率和最近停车记录 -->
+    <!-- 考点占用率和最近报名记录 -->
     <div class="main-content">
       <div class="main-section">
-        <div class="card parking-status">
+        <div class="card exam-site-status">
             <div class="card-header">
-            <h3>停车场占用率</h3>
+            <h3>考点座位占用率</h3>
             <el-button text>查看全部</el-button>
           </div>
           <div class="card-body">
-            <div class="parking-lots">
-              <div class="parking-lot-item" v-for="lot in parkingLots" :key="lot.id">
-                <div class="lot-info">
-                  <div class="lot-name">
-                    {{ lot.name }}
-                    <el-tag size="small" :type="lot.status === 'active' ? 'success' : 'warning'" effect="plain">
-                      {{ lot.status === 'active' ? '正常' : '维护中' }}
+            <div class="exam-sites">
+              <div class="exam-site-item" v-for="site in examSites" :key="site.id">
+                <div class="site-info">
+                  <div class="site-name">
+                    {{ site.name }}
+                    <el-tag size="small" :type="site.status === 'active' ? 'success' : 'warning'" effect="plain">
+                      {{ site.status === 'active' ? '正常' : '维护中' }}
                     </el-tag>
                   </div>
-                  <div class="lot-status">
-                    <span class="lot-capacity">{{ lot.occupied }}/{{ lot.capacity }}</span>
-                    <span class="lot-available">可用: <b>{{ lot.available }}</b></span>
+                  <div class="site-status">
+                    <span class="site-capacity">{{ site.occupied }}/{{ site.capacity }}</span>
+                    <span class="site-available">可用: <b>{{ site.available }}</b></span>
                   </div>
                 </div>
                 <el-progress 
-                  :percentage="Math.round(lot.occupied / lot.capacity * 100)" 
-                  :status="lot.occupied / lot.capacity > 0.9 ? 'exception' : 
-                          lot.occupied / lot.capacity > 0.7 ? 'warning' : 'success'" 
+                  :percentage="Math.round(site.occupied / site.capacity * 100)" 
+                  :status="site.occupied / site.capacity > 0.9 ? 'exception' : 
+                          site.occupied / site.capacity > 0.7 ? 'warning' : 'success'" 
                   :stroke-width="10"
                 />
               </div>
@@ -167,15 +165,15 @@ onMounted(() => {
       </div>
       
       <div class="side-section">
-        <div class="card recent-records">
+        <div class="card recent-registrations">
             <div class="card-header">
-            <h3>最近停车记录</h3>
+            <h3>最近报名记录</h3>
             <el-button text>查看全部</el-button>
           </div>
           <div class="card-body">
             <el-timeline>
               <el-timeline-item
-                v-for="record in parkingRecords"
+                v-for="record in examRegistrations"
                 :key="record.id"
                 :type="record.status"
                 :timestamp="record.time"
@@ -183,10 +181,10 @@ onMounted(() => {
                 size="small"
               >
                 <div class="record-content">
-                  <h4>{{ record.action === '入场' ? '车辆入场' : '车辆出场' }}</h4>
+                  <h4>{{ record.examLevel }}考试报名</h4>
                   <p>
-                    <span class="plate-number">{{ record.plateNumber }}</span>
-                    {{ record.action === '入场' ? '已进入' : '已离开' }}{{ record.location }}
+                    <span class="student-name">{{ record.studentName }}</span>
+                    已报名 {{ record.examSite }}
                   </p>
             </div>
               </el-timeline-item>
@@ -202,19 +200,20 @@ onMounted(() => {
 .app-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
+  padding: 10px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
-  padding: 0 5px;
+  margin-bottom: 0;
+  padding: 0;
 }
 
 .page-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -222,36 +221,36 @@ onMounted(() => {
 
 .page-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* 数据统计卡片样式 */
 .stats-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 25px;
-  margin-bottom: 25px;
-  padding: 5px;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding: 0;
   width: 100%;
   box-sizing: border-box;
 }
 
 .stats-card {
   background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   padding: 0;
   transition: all 0.3s;
   position: relative;
   width: 100%;
   display: block;
   box-sizing: border-box;
-  height: 160px; /* 固定高度 */
+  height: 130px; /* 减小高度 */
 }
 
 .stats-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stats-content {
@@ -263,7 +262,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 20px;
+  padding: 15px;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -274,39 +273,39 @@ onMounted(() => {
 }
 
 .stats-label {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-weight: 500;
 }
 
 .stats-value {
-  font-size: 42px;
+  font-size: 36px;
   font-weight: bold;
   color: var(--text-primary);
   line-height: 1;
 }
 
 .stats-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
-  margin-left: 15px;
+  margin-left: 10px;
 }
 
 .stats-icon .el-icon {
-  font-size: 34px;
+  font-size: 28px;
 }
 
 /* 主内容区域样式 */
 .main-content {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 30px;
+  gap: 15px;
   padding: 0;
   width: 100%;
   box-sizing: border-box;
@@ -318,8 +317,8 @@ onMounted(() => {
 
 .card {
   background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   height: 100%;
   transition: all 0.3s ease;
@@ -328,12 +327,12 @@ onMounted(() => {
 }
 
 .card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 .card-header {
-  padding: 18px 20px;
+  padding: 12px 15px;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   justify-content: space-between;
@@ -342,69 +341,70 @@ onMounted(() => {
 
 .card-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .card-body {
-  padding: 20px;
+  padding: 15px;
 }
 
-/* 停车场占用率 */
-.parking-lots {
+/* 考点占用率 */
+.exam-sites {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
 }
 
-.parking-lot-item {
-  padding: 10px 0;
+.exam-site-item {
+  padding: 8px 0;
 }
 
-.lot-info {
+.site-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
-.lot-name {
+.site-name {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   flex-wrap: wrap;
-}
-
-.lot-status {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  color: var(--text-secondary);
   font-size: 14px;
 }
 
-.lot-capacity {
+.site-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.site-capacity {
   font-weight: 500;
 }
 
-.lot-available {
+.site-available {
   font-weight: 500;
 }
 
-.lot-available b {
+.site-available b {
   color: var(--success-color);
   font-weight: 600;
 }
 
-/* 最近停车记录 */
+/* 最近报名记录 */
 .record-content h4 {
-  font-size: 14px;
-  margin: 0 0 5px 0;
+  font-size: 13px;
+  margin: 0 0 4px 0;
   color: var(--text-primary);
 }
 
@@ -414,7 +414,7 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-.plate-number {
+.student-name {
   font-weight: 500;
   color: var(--primary-color);
   margin-right: 4px;

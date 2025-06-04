@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
 import authUtils from '@/utils/auth';
 import router from '@/router';
@@ -6,7 +6,7 @@ import { API_CONFIG, RESPONSE_CODE, ROUTE_PATHS } from '@/constants';
 
 // 创建Axios实例
 const instance = axios.create({
-  baseURL: API_CONFIG.BASE_URL,
+  baseURL: API_CONFIG.BASE_URL, // 使用配置的BASE_URL
   timeout: API_CONFIG.TIMEOUT,
   headers: API_CONFIG.DEFAULT_HEADERS,
 });
@@ -14,33 +14,15 @@ const instance = axios.create({
 // 请求拦截器
 instance.interceptors.request.use(
   (config) => {
-    console.log('发送请求:', config.url);
-    
     // 使用认证工具获取token
     const token = authUtils.getToken();
     
     if (token) {
-      // 确保token不为null或undefined
-      console.log('使用token:', token.substring(0, 20) + '...');
       // 设置Authorization头
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      console.log('没有可用的token，请求将不包含Authorization头');
       // 如果没有token，确保不发送"Bearer null"
       delete config.headers.Authorization;
-      
-      // 检查当前路由，如果不是登录页且认为用户应该已登录，可能需要重新认证
-      try {
-        const currentPath = router.currentRoute.value.path;
-        const isAuthPath = currentPath === ROUTE_PATHS.AUTH;
-        const shouldBeAuthenticated = authUtils.isLoggedIn.value;
-        
-        if (shouldBeAuthenticated && !isAuthPath) {
-          console.warn('检测到潜在的认证问题：系统认为用户已登录，但找不到token');
-        }
-      } catch (err) {
-        console.error('路由检查失败:', err);
-      }
     }
     return config;
   },
@@ -53,17 +35,10 @@ instance.interceptors.request.use(
 // 响应拦截器
 instance.interceptors.response.use(
   (response) => {
-    console.log('收到响应:', response.config.url, response.status);
-    
     const { data } = response;
-    console.log('响应数据类型:', typeof data);
-    if (data && typeof data === 'object') {
-      console.log('响应数据结构:', Object.keys(data));
-    }
     
     // 确保返回的数据包含code字段再进行处理
     if (data && 'code' in data) {
-      console.log('响应code:', data.code);
       if (data.code === RESPONSE_CODE.SUCCESS) {
         return data;
       } else if (data.code === RESPONSE_CODE.UNAUTHORIZED) {
@@ -84,20 +59,8 @@ instance.interceptors.response.use(
       
       // 处理HTTP 401未授权错误
       if (status === RESPONSE_CODE.UNAUTHORIZED) {
-        // 打印详细错误信息
-        console.error('收到401未授权响应:', {
-          url: config?.url,
-          method: config?.method,
-          status,
-          responseData: error.response.data
-        });
-        
         // 避免重复处理（如果已经在业务层面处理过）
         if (error.message !== '登录已过期') {
-          // 获取当前请求的URL，用于日志
-          const requestUrl = config?.url || '未知URL';
-          console.warn(`请求 ${requestUrl} 返回401，可能是登录已过期`);
-          
           // 处理未授权情况
           handleUnauthorized('登录已过期，请重新登录');
         }
@@ -127,8 +90,6 @@ instance.interceptors.response.use(
 
 // 处理未授权情况的辅助函数
 const handleUnauthorized = (message: string) => {
-  console.log('handleUnauthorized被调用，message:', message);
-  
   // 显示错误消息
   try {
     ElMessage.closeAll(); // 关闭所有已有消息
@@ -143,24 +104,16 @@ const handleUnauthorized = (message: string) => {
   }
   
   // 使用认证工具清除登录状态
-  try {
-    console.log('清除认证状态');
-    authUtils.clearAuth();
-  } catch (err) {
-    console.error('清除认证状态失败:', err);
-  }
+  authUtils.clearAuth();
   
   // 强制延时确保UI更新
   setTimeout(() => {
     try {
       // 获取当前路由
       const currentPath = router.currentRoute.value.path;
-      console.log('当前路径:', currentPath);
       
       // 如果当前不在登录页，则跳转到登录页
       if (currentPath !== ROUTE_PATHS.AUTH) {
-        console.log(`登录已过期，从 ${currentPath} 重定向到登录页`);
-        
         // 使用replace而不是push，避免用户点击返回按钮时回到需要认证的页面
         router.replace({
           path: ROUTE_PATHS.AUTH,
@@ -171,8 +124,6 @@ const handleUnauthorized = (message: string) => {
           // 如果路由跳转失败，尝试强制刷新到登录页
           window.location.href = ROUTE_PATHS.AUTH;
         });
-      } else {
-        console.log('已经在登录页面，无需跳转');
       }
     } catch (err) {
       console.error('路由处理失败:', err);

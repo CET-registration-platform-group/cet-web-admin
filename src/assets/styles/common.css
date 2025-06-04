@@ -1,0 +1,101 @@
+/* 通用页面容器样式 */
+.app-container, 
+.data-analysis-container, 
+.students-container,
+.exam-sites-container,
+.exam-rooms-container,
+.exam-seats-container,
+.exam-info-container {
+  padding: 20px !important;
+}
+
+/* 卡片标题样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 !important;
+}
+
+.card-header h2,
+.card-header h3 {
+  font-size: 16px !important;
+  margin: 0 !important;
+  font-weight: 600 !important;
+}
+
+/* 搜索区域样式 */
+.search-area {
+  margin-bottom: 20px !important;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* 分页区域样式 */
+.pagination-container {
+  margin-top: 20px !important;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Element Plus 组件样式覆盖 */
+.el-card__header {
+  padding: 10px 15px !important;
+}
+
+.el-card__body {
+  padding: 15px !important;
+}
+
+.el-form--inline .el-form-item {
+  margin-right: 15px !important;
+  margin-bottom: 15px !important;
+}
+
+/* 页面标题样式 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.page-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+/* 表格内容紧凑化 */
+.el-table td.el-table__cell,
+.el-table th.el-table__cell {
+  padding: 8px !important;
+}
+
+/* 表单项间距减少 */
+.el-form-item {
+  margin-bottom: 15px !important;
+}
+
+/* 对话框内边距减少 */
+.el-dialog__body {
+  padding: 15px 20px !important;
+}
+
+.el-dialog__header {
+  padding: 15px 20px 10px !important;
+}
+
+.el-dialog__footer {
+  padding: 10px 20px 15px !important;
+}
+
+/* 搜索区域的表单字体大小统一 */
+.search-area .el-form-item__label,
+.search-area .el-input,
+.search-area .el-select,
+.search-area .el-button {
+  font-size: 14px !important;
+} 
