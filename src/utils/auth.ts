@@ -1,6 +1,8 @@
 import { ref, readonly } from 'vue';
 import { UserInfo } from '@/types';
-import { STORAGE_KEYS } from '@/constants';
+import { STORAGE_KEYS } from '@/constants/api';
+import { login as apiLogin, logout as apiLogout, getCurrentUser } from '@/api/auth';
+import type { LoginParams } from '@/types/auth';
 
 // 创建响应式的认证状态
 const token = ref<string | null>(null);
@@ -8,7 +10,7 @@ const userInfo = ref<UserInfo | null>(null);
 const isLoggedIn = ref(false);
 
 // 初始化状态（从localStorage获取）
-const initializeAuth = (): void => {
+const initializeAuth = async (): Promise<void> => {
   console.log('初始化认证状态...');
   
   // 尝试从storage获取token
@@ -77,6 +79,30 @@ const initializeAuth = (): void => {
   }
   
   console.log('认证状态初始化完成，token:', token.value ? '有效' : '无效', '登录状态:', isLoggedIn.value);
+
+  // 如果有token但没有用户信息，尝试获取用户信息
+  if (token.value && !userInfo.value) {
+    try {
+      const res = await getCurrentUser();
+      if (res.code === 200 && res.data) {
+        // 使用与token相同的存储策略
+        const remember = !!localStorage.getItem(STORAGE_KEYS.TOKEN);
+        userInfo.value = res.data;
+        isLoggedIn.value = true;
+        if (res.data.refreshToken) {
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, res.data.refreshToken);
+          sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, res.data.refreshToken);
+        }
+      } else {
+        // 如果获取用户信息失败，清除认证信息
+        clearAuth();
+      }
+    } catch (error) {
+      console.error('初始化认证状态失败:', error);
+      // 如果API调用失败，清除认证信息
+      clearAuth();
+    }
+  }
 };
 
 // 设置token和登录状态
@@ -134,6 +160,7 @@ const clearAuth = (): void => {
   try {
     // 从localStorage清除
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER_INFO);
     localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
     console.log('已清除localStorage中的认证信息');
@@ -144,6 +171,7 @@ const clearAuth = (): void => {
   try {
     // 从sessionStorage清除
     sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     sessionStorage.removeItem(STORAGE_KEYS.USER_INFO);
     sessionStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
     console.log('已清除sessionStorage中的认证信息');
@@ -252,20 +280,159 @@ const testUnauthorizedResponse = (): void => {
   console.log('设置了无效token用于测试');
 };
 
-// 导出认证工具
-export const authUtils = {
-  token: readonly(token),
-  isLoggedIn: readonly(isLoggedIn),
-  userInfo: readonly(userInfo),
-  initializeAuth,
-  setAuth,
-  clearAuth,
-  getToken,
-  checkIsLoggedIn,
-  getUserInfo,
+// 认证工具
+const authUtils = {
+  // 存储token
+  setToken(token: string, remember: boolean = false) {
+    console.log('setToken 被调用', token.substring(0, 10) + '...');
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(STORAGE_KEYS.TOKEN, token);
+  },
+
+  // 获取token
+  getToken(): string | null {
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN) || sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    console.log('getToken 被调用, 返回:', token ? token.substring(0, 10) + '...' : 'null');
+    return token;
+  },
+
+  // 存储刷新token
+  setRefreshToken(refreshToken: string, remember: boolean = false) {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+  },
+
+  // 获取刷新token
+  getRefreshToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  },
+
+  // 存储用户信息
+  setUserInfo(userInfo: any, remember: boolean = false) {
+    console.log('setUserInfo 被调用', userInfo);
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
+  },
+
+  // 获取用户信息
+  getUserInfo(): any {
+    const localUserInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    const sessionUserInfo = sessionStorage.getItem(STORAGE_KEYS.USER_INFO);
+    
+    if (localUserInfo) {
+      try {
+        return JSON.parse(localUserInfo);
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    if (sessionUserInfo) {
+      try {
+        return JSON.parse(sessionUserInfo);
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    return null;
+  },
+
+  // 设置登录状态
+  setLoggedIn(isLoggedIn: boolean, remember: boolean = false) {
+    console.log('setLoggedIn 被调用', isLoggedIn);
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(STORAGE_KEYS.IS_LOGGED_IN, isLoggedIn.toString());
+  },
+
+  // 检查是否已登录
+  checkIsLoggedIn(): boolean {
+    const localLoggedIn = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN) === 'true';
+    const sessionLoggedIn = sessionStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN) === 'true';
+    return localLoggedIn || sessionLoggedIn;
+  },
+
+  // 清除认证信息
+  clearAuth() {
+    console.log('clearAuth 被调用');
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+    
+    sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    sessionStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
+  },
+
+  // 登录
+  async login(params: LoginParams, remember: boolean = false): Promise<boolean> {
+    console.log('authUtils.login 被调用', params);
+    try {
+      const res = await apiLogin(params);
+      console.log('登录API响应:', res);
+      
+      if (res.code === 200 && res.data) {
+        this.setToken(res.data.token, remember);
+        if (res.data.refreshToken) {
+          this.setRefreshToken(res.data.refreshToken, remember);
+        }
+        this.setUserInfo(res.data.user, remember);
+        this.setLoggedIn(true, remember);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('登录失败:', error);
+      return false;
+    }
+  },
+
+  // 登出
+  async logout(): Promise<boolean> {
+    console.log('authUtils.logout 被调用');
+    try {
+      await apiLogout();
+      this.clearAuth();
+      return true;
+    } catch (error) {
+      console.error('登出失败:', error);
+      // 即使API调用失败，也清除本地存储的认证信息
+      this.clearAuth();
+      return false;
+    }
+  },
+
+  // 初始化认证状态
+  async initializeAuth(): Promise<void> {
+    // 如果有token但没有用户信息，尝试获取用户信息
+    const token = this.getToken();
+    const userInfo = this.getUserInfo();
+    
+    if (token && !userInfo) {
+      try {
+        const res = await getCurrentUser();
+        if (res.code === 200 && res.data) {
+          // 使用与token相同的存储策略
+          const remember = !!localStorage.getItem(STORAGE_KEYS.TOKEN);
+          this.setUserInfo(res.data, remember);
+          this.setLoggedIn(true, remember);
+        } else {
+          // 如果获取用户信息失败，清除认证信息
+          this.clearAuth();
+        }
+      } catch (error) {
+        console.error('初始化认证状态失败:', error);
+        // 如果API调用失败，清除认证信息
+        this.clearAuth();
+      }
+    }
+  },
+
   // 开发环境工具
   testUnauthorizedResponse
 };
 
-// 默认导出
+// 导出认证工具
 export default authUtils; 

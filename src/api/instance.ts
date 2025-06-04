@@ -1,29 +1,39 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
 import authUtils from '@/utils/auth';
 import router from '@/router';
-import { API_CONFIG, RESPONSE_CODE, ROUTE_PATHS } from '@/constants';
+import { API_CONFIG, RESPONSE_CODE, ROUTE_PATHS } from '@/constants/api';
 
-// 创建Axios实例
-const instance = axios.create({
-  baseURL: API_CONFIG.BASE_URL, // 使用配置的BASE_URL
+console.log('api/instance.ts 初始化');
+console.log('API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+
+// 创建axios实例
+const instance: AxiosInstance = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
-  headers: API_CONFIG.DEFAULT_HEADERS,
+  headers: API_CONFIG.DEFAULT_HEADERS
 });
 
 // 请求拦截器
 instance.interceptors.request.use(
   (config) => {
-    // 使用认证工具获取token
+    console.log('发送请求:', config.url, config.method, config.data);
+    
+    // 获取token
     const token = authUtils.getToken();
+    console.log('当前token:', token ? token.substring(0, 20) + '...' : 'null');
     
     if (token) {
+      // 确保headers对象存在
+      config.headers = config.headers || {};
       // 设置Authorization头
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`;
+      console.log('已设置Authorization头:', config.headers['Authorization'].substring(0, 20) + '...');
     } else {
-      // 如果没有token，确保不发送"Bearer null"
-      delete config.headers.Authorization;
+      console.warn('未找到token，请求将不带Authorization头');
     }
+    
     return config;
   },
   (error) => {
@@ -34,56 +44,32 @@ instance.interceptors.request.use(
 
 // 响应拦截器
 instance.interceptors.response.use(
-  (response) => {
-    const { data } = response;
+  (response: AxiosResponse) => {
+    console.log('收到响应:', response.config.url, response.status, response.data);
     
-    // 确保返回的数据包含code字段再进行处理
-    if (data && 'code' in data) {
-      if (data.code === RESPONSE_CODE.SUCCESS) {
-        return data;
-      } else if (data.code === RESPONSE_CODE.UNAUTHORIZED) {
-        // 处理业务层面的未授权（如token过期）
-        handleUnauthorized('登录已过期，请重新登录');
-        return Promise.reject(new Error(data.message || '登录已过期'));
-      } else {
-        // 这里不显示错误消息，交给业务代码处理
-        return Promise.reject(new Error(data.message || '请求失败'));
-      }
+    // 如果响应成功
+    if (response.data.code === RESPONSE_CODE.SUCCESS) {
+      return response.data;
     }
-    // 不包含code字段的情况，直接返回响应的data
-    return data;
+    
+    // 处理业务错误
+    ElMessage.error(response.data.message || '请求失败');
+    return Promise.reject(response.data);
   },
   (error) => {
-    if (error.response) {
-      const { status, config } = error.response;
-      
-      // 处理HTTP 401未授权错误
-      if (status === RESPONSE_CODE.UNAUTHORIZED) {
-        // 避免重复处理（如果已经在业务层面处理过）
-        if (error.message !== '登录已过期') {
-          // 处理未授权情况
-          handleUnauthorized('登录已过期，请重新登录');
-        }
-      } else if (status === RESPONSE_CODE.FORBIDDEN) {
-        // 处理403禁止访问
-        ElMessage.error('您没有权限访问此资源');
-      } else if (status === RESPONSE_CODE.NOT_FOUND) {
-        // 处理404资源不存在
-        ElMessage.error('请求的资源不存在');
-      } else if (status >= 500) {
-        // 处理服务器错误
-        ElMessage.error('服务器内部错误，请稍后重试');
-      } else {
-        // 处理其他错误
-        ElMessage.error(error.response.data?.message || '请求失败');
-      }
-    } else if (error.request) {
-      // 请求已发送但没有收到响应
-      ElMessage.error('网络连接异常，请检查网络设置');
-    } else {
-      // 请求配置出错
-      ElMessage.error('请求配置错误: ' + (error.message || '未知错误'));
+    console.error('响应错误:', error);
+    
+    // 处理401错误
+    if (error.response?.status === RESPONSE_CODE.UNAUTHORIZED) {
+      // 清除认证信息
+      authUtils.clearAuth();
+      // 重定向到登录页
+      window.location.href = '/auth';
+      return Promise.reject(error);
     }
+    
+    // 处理其他错误
+    ElMessage.error(error.response?.data?.message || '服务器错误');
     return Promise.reject(error);
   }
 );
@@ -133,9 +119,10 @@ const handleUnauthorized = (message: string) => {
   }, 100); // 短暂延时确保UI更新
 };
 
-// 添加泛型支持的请求函数
+// 封装请求方法
 const request = <T = any>(config: AxiosRequestConfig): Promise<T> => {
-  return instance(config) as unknown as Promise<T>;
+  console.log('发起请求:', config.url, config.method, config.data);
+  return instance.request<any, T>(config);
 };
 
 export default request; 

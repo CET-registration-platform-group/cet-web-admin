@@ -1,144 +1,129 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useAuth, useFormValidation } from '@/hooks'
-import { User, Lock, Message, Location, Document, Setting } from '@element-plus/icons-vue'
-import type { FormRules } from 'element-plus'
+import { ref, onMounted, reactive } from 'vue'
+import { useAuth } from '@/hooks'
+import { User, Lock, Location, Document, Setting } from '@element-plus/icons-vue'
+import type { FormRules, FormInstance } from 'element-plus'
 import { LoginParams } from '@/types'
 import logoImg from '@/assets/logo.png'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import authUtils from '@/utils/auth'
+import { ROUTE_PATHS } from '@/constants/api'
+import { login } from '@/api/auth'
 
-const isLogin = ref(true)
+console.log('Auth.vue 组件初始化');
+
+const router = useRouter()
 const rememberMe = ref(false)
 
 // 使用认证hook
-const { loading, handleLogin, checkAuthAndRedirect } = useAuth()
+const { loading } = useAuth()
 
 // 登录表单验证
 const loginFormRules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
+    { min: 3, max: 20, message: '用户名长度应为3到20个字符', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+    { min: 6, max: 20, message: '密码长度应为6到20个字符', trigger: 'blur' }
   ]
 }
 
-// 使用表单验证hook - 登录表单
-const initialLoginForm: LoginParams = { username: '', password: '' }
-const { 
-  form: loginForm, 
-  formRef: loginFormRef,
-  formRules: loginRules,
-  validateForm: validateLoginForm
-} = useFormValidation(initialLoginForm, loginFormRules)
-
-// 注册表单验证
-const registerFormRules: FormRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
-    {
-      validator: (_: any, value: string, callback: Function) => {
-        if (value !== registerForm.value.password) {
-          callback(new Error('两次输入密码不一致'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ]
-}
-
-// 使用表单验证hook - 注册表单
-const initialRegisterForm = {
+// 登录表单数据
+const loginForm = reactive<LoginParams>({
   username: '',
-  password: '',
-  confirmPassword: '',
-  email: ''
-}
+  password: ''
+})
 
-const { 
-  form: registerForm, 
-  formRef: registerFormRef,
-  formRules: registerRules,
-  validateForm: validateRegisterForm,
-  resetForm: resetRegisterForm
-} = useFormValidation(initialRegisterForm, registerFormRules)
-
-// 切换登录/注册表单
-const toggleForm = () => {
-  isLogin.value = !isLogin.value
-}
+// 表单引用
+const loginFormRef = ref<FormInstance>()
 
 // 登录处理
 const doLogin = async () => {
-  const valid = await validateLoginForm()
-  if (!valid) return
+  console.log('点击登录按钮，开始执行 doLogin');
+  console.log('当前表单数据:', loginForm);
   
-  await handleLogin(loginForm.value, rememberMe.value)
-}
-
-// 注册处理
-const doRegister = async () => {
-  const valid = await validateRegisterForm()
-  if (!valid) return
+  if (!loginFormRef.value) {
+    console.log('loginFormRef 未获取到');
+    return;
+  }
   
-  // 模拟注册过程
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    // 切换到登录表单
-    isLogin.value = true
-    resetRegisterForm()
-  }, 1000)
+  try {
+    console.log('准备验证表单');
+    await loginFormRef.value.validate();
+    console.log('表单验证通过，准备发送登录请求');
+    
+    try {
+      loading.value = true;
+      
+      console.log('登录参数:', loginForm);
+      
+      // 使用auth.ts中的login接口
+      const response = await login(loginForm);
+      
+      console.log('登录响应:', response);
+      
+      if (response.code === 200) {
+        ElMessage.success('登录成功');
+        
+        // 保存token和用户信息
+        if (response.data.token) {
+          authUtils.setToken(response.data.token, rememberMe.value);
+        }
+        if (response.data.user) {
+          authUtils.setUserInfo(response.data.user, rememberMe.value);
+        }
+        authUtils.setLoggedIn(true, rememberMe.value);
+        
+        router.push(ROUTE_PATHS.DASHBOARD);
+      } else {
+        ElMessage.error(response.message || '登录失败，请检查用户名和密码');
+      }
+    } catch (error) {
+      console.error('登录过程中出错:', error);
+      ElMessage.error('登录失败，请稍后重试');
+    } finally {
+      loading.value = false;
+    }
+  } catch (error) {
+    console.error('表单验证失败:', error);
+  }
 }
 
 // 在组件挂载时检查登录状态
 onMounted(() => {
-  // 检查登录状态并重定向
-  checkAuthAndRedirect()
+  console.log('Auth.vue 组件挂载完成');
 })
 </script>
 
 <template>
   <div class="auth-container">
     <div class="auth-box">
-      <div class="form-container" :class="{ 'slide': !isLogin }">
+      <div class="form-container">
         <!-- 登录表单 -->
-        <div class="form-panel login-panel" :class="{ 'active': isLogin }">
+        <div class="form-panel login-panel">
           <div class="form-header">
             <div class="logo-container">
-              <img :src="logoImg" alt="停车场管理系统" class="logo-image" v-if="false">
-              <h1 class="logo-text">停车场管理系统</h1>
+              <img :src="logoImg" alt="CET报名管理系统" class="logo-image" v-if="false">
+              <h1 class="logo-text">CET报名管理系统</h1>
             </div>
             <h2>欢迎回来</h2>
-            <p>请登录您的账号以继续使用停车管理系统</p>
+            <p>请登录您的账号以继续使用CET报名管理系统</p>
           </div>
           
           <el-form 
             ref="loginFormRef"
             :model="loginForm" 
-            :rules="loginRules" 
+            :rules="loginFormRules" 
             label-position="top" 
             class="login-form"
           >
             <el-form-item prop="username">
               <el-input v-model="loginForm.username" placeholder="用户名" size="large">
                 <template #prefix>
-                  <el-icon><user /></el-icon>
+                  <el-icon><User /></el-icon>
                 </template>
               </el-input>
             </el-form-item>
@@ -146,7 +131,7 @@ onMounted(() => {
             <el-form-item prop="password">
               <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password size="large">
                 <template #prefix>
-                  <el-icon><lock /></el-icon>
+                  <el-icon><Lock /></el-icon>
                 </template>
               </el-input>
             </el-form-item>
@@ -157,129 +142,36 @@ onMounted(() => {
             </div>
             
             <el-button type="primary" :loading="loading" @click="doLogin" class="submit-btn" size="large">登录</el-button>
-            
-            <div class="form-footer">
-              <span>还没有账号?</span>
-              <el-button link type="primary" @click="toggleForm">立即注册</el-button>
-            </div>
-          </el-form>
-        </div>
-        
-        <!-- 注册表单 -->
-        <div class="form-panel register-panel" :class="{ 'active': !isLogin }">
-          <div class="form-header">
-            <div class="logo-container">
-              <img :src="logoImg" alt="停车场管理系统" class="logo-image" v-if="false">
-              <h1 class="logo-text">停车场管理系统</h1>
-            </div>
-            <h2>创建账号</h2>
-            <p>注册一个新账号以使用停车管理系统</p>
-          </div>
-          
-          <el-form 
-            ref="registerFormRef"
-            :model="registerForm" 
-            :rules="registerRules" 
-            label-position="top" 
-            class="register-form"
-          >
-            <el-form-item prop="username">
-              <el-input v-model="registerForm.username" placeholder="用户名" size="large">
-                <template #prefix>
-                  <el-icon><user /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            
-            <el-form-item prop="email">
-              <el-input v-model="registerForm.email" placeholder="邮箱" size="large">
-                <template #prefix>
-                  <el-icon><message /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            
-            <el-form-item prop="password">
-              <el-input v-model="registerForm.password" type="password" placeholder="密码" show-password size="large">
-                <template #prefix>
-                  <el-icon><lock /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            
-            <el-form-item prop="confirmPassword">
-              <el-input v-model="registerForm.confirmPassword" type="password" placeholder="确认密码" show-password size="large">
-                <template #prefix>
-                  <el-icon><lock /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            
-            <el-button type="primary" :loading="loading" @click="doRegister" class="submit-btn" size="large">注册</el-button>
-            
-            <div class="form-footer">
-              <span>已有账号?</span>
-              <el-button link type="primary" @click="toggleForm">返回登录</el-button>
-            </div>
           </el-form>
         </div>
       </div>
       
       <!-- 装饰性背景 -->
-      <div class="decoration-panel" :class="{ 'slide': !isLogin }">
-        <div class="decoration-content login-decoration" :class="{ 'active': isLogin }">
+      <div class="decoration-panel">
+        <div class="decoration-content login-decoration">
           <div class="decoration-text">
             <div class="decoration-header">
-              <h2>欢迎使用停车管理系统</h2>
-              <p>高效、智能的停车场管理解决方案</p>
+              <h2>欢迎使用CET报名管理系统</h2>
+              <p>高效、智能的考试报名管理解决方案</p>
             </div>
             <div class="features">
               <div class="feature-item">
                 <div class="icon-container">
                   <el-icon><Location /></el-icon>
                 </div>
-                <span>多停车场集中管理</span>
+                <span>多考点集中管理</span>
               </div>
               <div class="feature-item">
                 <div class="icon-container">
                   <el-icon><Document /></el-icon>
                 </div>
-                <span>智能车位分配</span>
+                <span>考场灵活分配</span>
               </div>
               <div class="feature-item">
                 <div class="icon-container">
                   <el-icon><Setting /></el-icon>
                 </div>
-                <span>灵活的计费规则</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="decoration-content register-decoration" :class="{ 'active': !isLogin }">
-          <div class="decoration-text">
-            <div class="decoration-header">
-              <h2>加入我们</h2>
-              <p>注册账号，体验智能停车管理系统</p>
-            </div>
-            <div class="benefits">
-              <div class="benefit-item">
-                <div class="icon-container">
-                  <el-icon><User /></el-icon>
-                </div>
-                <span>个性化用户体验</span>
-              </div>
-              <div class="benefit-item">
-                <div class="icon-container">
-                  <el-icon><Lock /></el-icon>
-                </div>
-                <span>安全的数据保护</span>
-              </div>
-              <div class="benefit-item">
-                <div class="icon-container">
-                  <el-icon><Message /></el-icon>
-                </div>
-                <span>及时的通知提醒</span>
+                <span>报名流程管理</span>
               </div>
             </div>
           </div>
@@ -288,7 +180,7 @@ onMounted(() => {
     </div>
 
     <div class="auth-footer">
-      <p>© {{ new Date().getFullYear() }} 停车场管理系统 - 版权所有</p>
+      <p>© {{ new Date().getFullYear() }} CET报名管理系统 - 版权所有</p>
     </div>
   </div>
 </template>
@@ -343,149 +235,45 @@ onMounted(() => {
 
 .login-panel {
   left: 0;
-  transform: translateX(-100%);
-}
-
-.register-panel {
-  right: 0;
-  transform: translateX(100%);
-}
-
-.form-panel.active {
   transform: translateX(0);
   opacity: 1;
   visibility: visible;
   z-index: 5;
 }
 
-.form-container.slide .login-panel {
-  transform: translateX(-100%);
-  opacity: 0;
-  visibility: hidden;
+.form-header {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
-.form-container.slide .register-panel {
-  transform: translateX(0);
-  opacity: 1;
-  visibility: visible;
+.logo-container {
+  margin-bottom: 20px;
 }
 
-/* 装饰面板样式 */
-.decoration-panel {
-  position: relative;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(135deg, #3a7bd5 0%, #9d50bb 100%);
-  overflow: hidden;
-  transition: all 0.6s ease-in-out;
-  color: #fff;
+.logo-image {
+  width: 120px;
+  height: auto;
 }
 
-.decoration-content {
-  position: absolute;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  padding: 50px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  transition: all 0.6s ease-in-out;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.decoration-text {
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-}
-
-.login-decoration {
-  left: 0;
-  transform: translateX(100%);
-}
-
-.register-decoration {
-  right: 0;
-  transform: translateX(-100%);
-}
-
-.decoration-content.active {
-  transform: translateX(0);
-  opacity: 1;
-  visibility: visible;
-}
-
-.decoration-panel.slide .login-decoration {
-  transform: translateX(-100%);
-  opacity: 0;
-  visibility: hidden;
-}
-
-.decoration-panel.slide .register-decoration {
-  transform: translateX(0);
-  opacity: 1;
-  visibility: visible;
-}
-
-.decoration-content h2 {
-  color: #fff;
-  font-size: 32px;
-  margin-bottom: 10px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: left;
-}
-
-.decoration-content p {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 16px;
-  margin-bottom: 5px;
-  text-align: left;
-}
-
-.features, .benefits {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  align-items: flex-start;
-  text-align: left;
-  width: 100%;
-  margin-top: 30px;
-}
-
-.feature-item, .benefit-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  width: 100%;
-}
-
-.icon-container {
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  backdrop-filter: blur(8px);
-}
-
-.feature-item .el-icon, .benefit-item .el-icon {
+.logo-text {
   font-size: 24px;
+  color: #333;
+  margin: 0;
 }
 
-.feature-item span, .benefit-item span {
-  font-size: 16px;
-  font-weight: 500;
+.form-header h2 {
+  font-size: 24px;
+  color: #333;
+  margin: 0 0 10px;
+}
+
+.form-header p {
+  color: #666;
+  margin: 0;
+}
+
+.login-form {
+  width: 100%;
 }
 
 .form-actions {
@@ -498,132 +286,120 @@ onMounted(() => {
 .submit-btn {
   width: 100%;
   margin-top: 10px;
-  padding: 12px 0;
-  font-size: 16px;
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  transition: all 0.3s;
 }
 
-.submit-btn:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(58, 123, 213, 0.4);
+.decoration-panel {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(135deg, #3a7bd5 0%, #9d50bb 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.form-footer {
-  margin-top: 20px;
+.decoration-content {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  padding: 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  transition: all 0.6s ease-in-out;
+}
+
+.login-decoration {
+  left: 0;
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.decoration-text {
   text-align: center;
-}
-
-.form-footer span {
-  color: var(--text-secondary);
-  margin-right: 5px;
-}
-
-.logo-container {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.logo-image {
-  height: 60px;
-  margin-bottom: 10px;
-}
-
-.logo-text {
-  font-size: 24px;
-  color: var(--primary-color);
-  margin: 0;
-}
-
-.form-header {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.form-header h2 {
-  margin-bottom: 10px;
-  font-size: 24px;
-  color: var(--text-primary);
-}
-
-.form-header p {
-  margin-bottom: 5px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
-
-.login-form, .register-form {
-  margin-top: 0;
-}
-
-.login-form .el-form-item,
-.register-form .el-form-item {
-  margin-bottom: 20px;
-}
-
-.register-form .el-form-item:last-of-type {
-  margin-bottom: 20px;
+  max-width: 80%;
 }
 
 .decoration-header {
-  text-align: left;
-  width: 100%;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+}
+
+.decoration-header h2 {
+  font-size: 28px;
+  margin: 0 0 15px;
+}
+
+.decoration-header p {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.icon-container {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-container .el-icon {
+  font-size: 20px;
+}
+
+.feature-item span {
+  font-size: 16px;
 }
 
 .auth-footer {
-  position: absolute;
-  bottom: 20px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  color: #fff;
   text-align: center;
+  margin-top: 20px;
+  opacity: 0.8;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .auth-box {
     flex-direction: column;
     height: auto;
-    max-width: 90%;
   }
   
-  .form-container, .decoration-panel {
+  .form-container,
+  .decoration-panel {
     width: 100%;
   }
   
-  .form-panel {
-    position: relative;
-    width: 100%;
-    transform: none;
-    padding: 30px 20px;
-  }
-  
-  .login-panel, .register-panel, .decoration-content {
-    display: none;
-  }
-  
-  .form-panel.active, .decoration-content.active {
-    display: block;
-  }
-  
-  .form-container.slide .login-panel,
-  .form-container.slide .register-panel,
-  .decoration-panel.slide .login-decoration,
-  .decoration-panel.slide .register-decoration {
-    transform: none;
+  .form-container {
+    height: 500px;
   }
   
   .decoration-panel {
-    display: none;
+    height: 300px;
   }
   
-  .auth-footer {
-    position: relative;
-    margin-top: 20px;
-    bottom: auto;
+  .login-panel {
+    transform: translateX(0);
+  }
+  
+  .login-decoration {
+    transform: translateX(0);
   }
 }
 </style> 

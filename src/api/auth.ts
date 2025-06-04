@@ -1,35 +1,43 @@
 import request from './instance';
-import { ApiResponse, LoginParams, LoginResponseData } from '@/types';
+import { API_PATHS } from '@/constants/api';
+import type { LoginParams, LoginResponse, LogoutResponse, RefreshTokenResponse } from '@/types/auth';
+
+console.log('auth API 初始化');
+console.log('登录API路径:', API_PATHS.ADMIN.AUTH.LOGIN);
 
 // 登录接口
-export function login(data: LoginParams) {
-  return request<ApiResponse<LoginResponseData>>({
-    url: '/auth/login',
-    method: 'post',
+export const login = (data: LoginParams) => {
+  console.log('调用登录API，参数:', data);
+  console.log('登录API路径:', API_PATHS.ADMIN.AUTH.LOGIN);
+  
+  return request<LoginResponse>({
+    url: API_PATHS.ADMIN.AUTH.LOGIN,
+    method: 'POST',
     data
   });
-}
+};
+
 
 // 登出接口
-export function logout() {
-  return request<ApiResponse<null>>({
-    url: '/auth/logout',
-    method: 'post'
+export const logout = () => {
+  return request<LogoutResponse>({
+    url: API_PATHS.ADMIN.AUTH.LOGOUT,
+    method: 'POST'
   });
-}
+};
 
 // 获取当前用户信息接口
-export function getUserInfo() {
-  return request<ApiResponse<LoginResponseData['user']>>({
-    url: '/auth/me',
+export function getCurrentUser() {
+  return request({
+    url: '/api/admin/user/current',
     method: 'get'
   });
 }
 
-// 刷新令牌接口
-export function refreshToken() {
-  return request<ApiResponse<{token: string}>>({
-    url: '/auth/refresh',
-    method: 'post'
+// 刷新token接口
+export const refreshToken = () => {
+  return request<RefreshTokenResponse>({
+    url: API_PATHS.ADMIN.AUTH.REFRESH_TOKEN,
+    method: 'POST'
   });
-} 
+}; 

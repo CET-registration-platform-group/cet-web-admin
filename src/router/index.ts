@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import authUtils from '@/utils/auth'
-import { ROUTE_PATHS, ROUTE_NAMES } from '@/constants'
-import { STORAGE_KEYS } from '@/constants'
+import { ROUTE_PATHS, ROUTE_NAMES, STORAGE_KEYS } from '@/constants/api'
 
 // 扩展Vue Router的RouteMeta接口
 declare module 'vue-router' {
@@ -34,6 +33,13 @@ const router = createRouter({
           name: ROUTE_NAMES.DASHBOARD,
           component: () => import('../views/Dashboard.vue'),
           meta: { title: '首页', requiresAuth: true }
+        },
+        // 用户管理
+        {
+          path: ROUTE_PATHS.USERS,
+          name: ROUTE_NAMES.USERS,
+          component: () => import('../views/user/Users.vue'),
+          meta: { title: '用户管理', requiresAuth: true }
         },
         // 考点管理
         {
@@ -85,8 +91,8 @@ const router = createRouter({
       name: ROUTE_NAMES.NOT_FOUND,
       component: () => import('../views/NotFound.vue'),
       meta: { title: '页面不存在', requiresAuth: false }
-    }
-  ]
+        }
+      ]
 })
 
 // 添加全局前置守卫，处理认证和授权

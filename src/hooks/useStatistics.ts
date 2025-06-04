@@ -3,7 +3,7 @@ import { getExamSiteList } from '@/api/examSite';
 import { getExamSeatList } from '@/api/examSeat';
 import { getExamInfoList } from '@/api/examInfo';
 import { getStudentList } from '@/api/student';
-import { EXAM_SEAT_STATUS } from '@/constants';
+import { EXAM_SEAT_STATUS } from '@/constants/api';
 
 export function useStatistics() {
   // 基础数据

@@ -133,7 +133,7 @@ import { ElMessage, FormInstance } from 'element-plus';
 import { ExamSeat, ExamRoom } from '@/types';
 import { getExamSeatList, createExamSeat, updateExamSeat, deleteExamSeat } from '@/api/examSeat';
 import { getExamRoomList } from '@/api/examRoom';
-import { EXAM_SEAT_STATUS } from '@/constants';
+import { EXAM_SEAT_STATUS } from '@/constants/api';
 
 // 表格数据
 const tableData = ref<ExamSeat[]>([]);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Odometer, 
   User, 
@@ -15,7 +15,8 @@ import {
   ArrowRight
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/hooks'
-import { STORAGE_KEYS } from '@/constants'
+import { STORAGE_KEYS, ROUTE_PATHS } from '@/constants/api'
+import authUtils from '@/utils/auth'
 
 const router = useRouter()
 const activeMenu = computed(() => router.currentRoute.value.path)
@@ -71,6 +72,50 @@ onBeforeUnmount(() => {
     clearInterval(checkInterval);
   }
 });
+
+// 菜单项
+const menuItems = [
+  {
+    title: '首页',
+    icon: 'House',
+    path: ROUTE_PATHS.DASHBOARD
+  },
+  {
+    title: '用户管理',
+    icon: 'User',
+    path: ROUTE_PATHS.USERS
+  },
+  {
+    title: '考点管理',
+    icon: 'Location',
+    path: ROUTE_PATHS.EXAM_SITES
+  },
+  {
+    title: '考场管理',
+    icon: 'OfficeBuilding',
+    path: ROUTE_PATHS.EXAM_ROOMS
+  },
+  {
+    title: '座位管理',
+    icon: 'Grid',
+    path: ROUTE_PATHS.EXAM_SEATS
+  },
+  {
+    title: '考试信息',
+    icon: 'Document',
+    path: ROUTE_PATHS.EXAM_INFO
+  },
+  {
+    title: '学生管理',
+    icon: 'UserFilled',
+    path: ROUTE_PATHS.STUDENTS
+  },
+  {
+    title: '数据分析',
+    icon: 'TrendCharts',
+    path: ROUTE_PATHS.DATA_ANALYSIS
+  }
+];
 </script>
 
 <template>
@@ -93,7 +138,7 @@ onBeforeUnmount(() => {
           text-color="#bfcbd9"
           active-text-color="#ffffff"
       >
-        <el-menu-item index="/dashboard">
+        <el-menu-item :index="ROUTE_PATHS.DASHBOARD">
             <el-icon><Menu /></el-icon>
           <template #title>首页</template>
         </el-menu-item>
@@ -103,33 +148,38 @@ onBeforeUnmount(() => {
               <el-icon><Box /></el-icon>
               <span>考试场地管理</span>
             </template>
-        <el-menu-item index="/exam-sites">
+        <el-menu-item :index="ROUTE_PATHS.EXAM_SITES">
               <el-icon><List /></el-icon>
               <span>考点管理</span>
             </el-menu-item>
-            <el-menu-item index="/exam-rooms">
+            <el-menu-item :index="ROUTE_PATHS.EXAM_ROOMS">
               <el-icon><Share /></el-icon>
               <span>考场管理</span>
             </el-menu-item>
-            <el-menu-item index="/exam-seats">
+            <el-menu-item :index="ROUTE_PATHS.EXAM_SEATS">
               <el-icon><SetUp /></el-icon>
               <span>座位管理</span>
         </el-menu-item>
           </el-sub-menu>
           
-          <el-menu-item index="/exam-info">
+          <el-menu-item :index="ROUTE_PATHS.EXAM_INFO">
             <el-icon><Odometer /></el-icon>
             <template #title>考试信息</template>
         </el-menu-item>
           
-          <el-menu-item index="/students">
+          <el-menu-item :index="ROUTE_PATHS.STUDENTS">
             <el-icon><User /></el-icon>
             <template #title>学生管理</template>
         </el-menu-item>
           
-          <el-menu-item index="/data-analysis">
+          <el-menu-item :index="ROUTE_PATHS.DATA_ANALYSIS">
             <el-icon><LocationInformation /></el-icon>
             <template #title>数据分析</template>
+        </el-menu-item>
+          
+          <el-menu-item :index="ROUTE_PATHS.USERS">
+            <el-icon><User /></el-icon>
+            <template #title>用户管理</template>
         </el-menu-item>
       </el-menu>
         
