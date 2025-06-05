@@ -64,9 +64,9 @@ const router = createRouter({
         },
         // 考试信息管理
         {
-          path: ROUTE_PATHS.EXAM_INFO,
-          name: ROUTE_NAMES.EXAM_INFO,
-          component: () => import('../views/exam/ExamInfo.vue'),
+          path: ROUTE_PATHS.EXAM_INFOS,
+          name: ROUTE_NAMES.EXAM_INFOS,
+          component: () => import('../views/exam/ExamInfos.vue'),
           meta: { title: '考试信息管理', requiresAuth: true }
         },
         // 数据统计分析

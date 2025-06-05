@@ -1,9 +1,17 @@
 <script setup lang="ts">
-// App.vue作为根组件，只需要渲染路由视图
+import { StagewiseToolbar } from '@stagewise/toolbar-vue'
+import { computed } from 'vue'
+
+const stagewiseConfig = {
+  plugins: []
+}
+
+const isDev = computed(() => import.meta.env.DEV)
 </script>
 
 <template>
   <router-view />
+  <StagewiseToolbar v-if="isDev" :config="stagewiseConfig" />
 </template>
 
 <style>

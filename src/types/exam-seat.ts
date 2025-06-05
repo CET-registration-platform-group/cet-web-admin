@@ -1,10 +1,12 @@
 // 考试座位类型定义
 export interface ExamSeat {
-  id?: number;
+  id: number;
   examSiteId: number;
   examRoomId: number;
   status: number;  // 0: 空闲, 1: 已分配
   seatNumber: string;
+  examRoomName?: string;
+  examSiteName?: string;
 }
 
 // 考试座位查询参数

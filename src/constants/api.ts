@@ -32,7 +32,7 @@ export const ROUTE_NAMES = {
   EXAM_SITES: 'exam-sites',
   EXAM_ROOMS: 'exam-rooms',
   EXAM_SEATS: 'exam-seats',
-  EXAM_INFO: 'exam-info',
+  EXAM_INFOS: 'exam-infos',
   STUDENTS: 'students',
   DATA_ANALYSIS: 'data-analysis',
   NOT_FOUND: 'not-found'
@@ -47,7 +47,7 @@ export const ROUTE_PATHS = {
   EXAM_SITES: '/main/exam-sites',
   EXAM_ROOMS: '/main/exam-rooms',
   EXAM_SEATS: '/main/exam-seats',
-  EXAM_INFO: '/main/exam-info',
+  EXAM_INFOS: '/main/exam-infos',
   STUDENTS: '/main/students',
   DATA_ANALYSIS: '/main/data-analysis'
 };

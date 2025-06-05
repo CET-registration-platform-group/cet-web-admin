@@ -38,9 +38,9 @@ export const deleteStudent = (id: number) => {
 };
 
 // 获取学生详情
-export const getStudentDetail = (id: number) => {
-  return request<StudentDetailResponse>({
-    url: API_PATHS.ADMIN.STUDENTS.DETAIL(id),
-    method: 'GET'
+export function getStudentDetail(id: number) {
+  return request({
+    url: `/api/admin/students/${id}`,
+    method: 'get'
   });
-}; 
+} 

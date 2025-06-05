@@ -1,11 +1,19 @@
 // 考试信息类型定义
 export interface ExamInfo {
-  id?: number;
+  id: number;
   studentId: number;
+  studentName?: string;
   examSeatId: number;
+  seatNumber?: string;
+  examRoomId?: number;
+  roomNumber?: string;
+  examSiteId?: number;
+  examSiteName?: string;
   examTime: string;
   examType: string;
   examLevel: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // 考试信息查询参数

@@ -103,7 +103,7 @@ const menuItems = [
   {
     title: '考试信息',
     icon: 'Document',
-    path: ROUTE_PATHS.EXAM_INFO
+    path: ROUTE_PATHS.EXAM_INFOS
   },
   {
     title: '学生管理',
@@ -162,7 +162,7 @@ const menuItems = [
         </el-menu-item>
           </el-sub-menu>
           
-          <el-menu-item :index="ROUTE_PATHS.EXAM_INFO">
+          <el-menu-item :index="ROUTE_PATHS.EXAM_INFOS">
             <el-icon><Odometer /></el-icon>
             <template #title>考试信息</template>
         </el-menu-item>

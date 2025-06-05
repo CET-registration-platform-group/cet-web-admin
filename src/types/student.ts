@@ -1,7 +1,7 @@
 // 学生类型定义
 export interface Student {
-  id?: number;
-  identityDocumentType?: number;  // 0: 身份证, 1: 护照
+  id: number;
+  identityDocumentType: number;  // 0: 身份证, 1: 护照
   identityDocumentNumber: string;
   name: string;
   email?: string;

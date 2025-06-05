@@ -22,7 +22,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="座位">
-            <el-select v-model="searchForm.examSeatId" placeholder="选择座位" clearable>
+            <el-select v-model="searchForm.examSeatId" placeholder="选择座位" clearable style="width: 200px">
               <el-option
                 v-for="item in seatOptions"
                 :key="item.value"
@@ -32,13 +32,13 @@
             </el-select>
           </el-form-item>
           <el-form-item label="考试类型">
-            <el-select v-model="searchForm.examType" placeholder="选择类型" clearable>
+            <el-select v-model="searchForm.examType" placeholder="选择类型" clearable style="width: 200px">
               <el-option label="笔试" value="笔试" />
               <el-option label="口试" value="口试" />
             </el-select>
           </el-form-item>
           <el-form-item label="考试级别">
-            <el-select v-model="searchForm.examLevel" placeholder="选择级别" clearable>
+            <el-select v-model="searchForm.examLevel" placeholder="选择级别" clearable style="width: 200px">
               <el-option label="四级" value="四级" />
               <el-option label="六级" value="六级" />
             </el-select>
@@ -57,7 +57,11 @@
         style="width: 100%"
         border
         stripe
+        v-bind="$attrs"
       >
+        <template #empty>
+          <el-empty description="暂无数据" />
+        </template>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="studentName" label="学生姓名" min-width="120" />
         <el-table-column prop="seatNumber" label="座位号" min-width="120" />
@@ -89,6 +93,7 @@
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
+          :background="true"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -108,23 +113,67 @@
         label-width="100px"
       >
         <el-form-item label="学生" prop="studentId">
-          <el-select v-model="form.studentId" placeholder="请选择学生" style="width: 100%" filterable remote :remote-method="remoteSearchStudents" :loading="studentLoading">
+          <el-select
+            v-model="form.studentId"
+            placeholder="请选择学生"
+            style="width: 100%"
+            filterable
+            remote
+            :remote-method="remoteSearchStudents"
+            :loading="studentLoading"
+            :popper-class="'student-select-dropdown'"
+          >
             <el-option
               v-for="item in studentOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"
             />
+            <template #footer>
+              <div class="select-footer">
+                <el-pagination
+                  v-model:current-page="studentPage"
+                  v-model:page-size="studentPageSize"
+                  :total="studentTotal"
+                  :page-sizes="[10, 20, 50]"
+                  layout="total, sizes, prev, pager, next"
+                  @size-change="handleStudentSizeChange"
+                  @current-change="handleStudentPageChange"
+                />
+              </div>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item label="座位" prop="examSeatId">
-          <el-select v-model="form.examSeatId" placeholder="请选择座位" style="width: 100%">
+          <el-select
+            v-model="form.examSeatId"
+            placeholder="请选择座位"
+            style="width: 100%"
+            filterable
+            remote
+            :remote-method="remoteSearchSeats"
+            :loading="seatLoading"
+            :popper-class="'seat-select-dropdown'"
+          >
             <el-option
               v-for="item in seatOptions"
               :key="item.value"
               :label="item.label"
               :value="item.value"
             />
+            <template #footer>
+              <div class="select-footer">
+                <el-pagination
+                  v-model:current-page="seatPage"
+                  v-model:page-size="seatPageSize"
+                  :total="seatTotal"
+                  :page-sizes="[10, 20, 50]"
+                  layout="total, sizes, prev, pager, next"
+                  @size-change="handleSeatSizeChange"
+                  @current-change="handleSeatPageChange"
+                />
+              </div>
+            </template>
           </el-select>
         </el-form-item>
         <el-form-item label="考试时间" prop="examTime">
@@ -163,8 +212,9 @@ import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, FormInstance } from 'element-plus';
 import { ExamInfo, ExamSeat, Student } from '@/types';
 import { getExamInfoList, createExamInfo, updateExamInfo, deleteExamInfo } from '@/api/examInfo';
-import { getExamSeatList } from '@/api/examSeat';
-import { getStudentList } from '@/api/student';
+import { getExamSeatList, getExamSeatDetail } from '@/api/examSeat';
+import { getStudentList, getStudentDetail } from '@/api/student';
+import { getExamSiteList } from '@/api/examSite';
 
 // 表格数据
 const tableData = ref<ExamInfo[]>([]);
@@ -213,36 +263,36 @@ const rules = {
 const dialogVisible = ref(false);
 const dialogType = ref<'add' | 'edit'>('add');
 
+// 学生选择分页
+const studentPage = ref(1);
+const studentPageSize = ref(10);
+const studentTotal = ref(0);
+
+// 座位选择分页
+const seatPage = ref(1);
+const seatPageSize = ref(10);
+const seatTotal = ref(0);
+const seatLoading = ref(false);
+
 // 远程搜索学生
 const remoteSearchStudents = async (query: string) => {
-  if (query.length < 1) return;
-  
   studentLoading.value = true;
   try {
     const params = {
-      size: 20,
+      pageNum: studentPage.value,
+      pageSize: studentPageSize.value,
       name: query
     };
     
     const res = await getStudentList(params);
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      let studentList: Student[] = [];
-      if (res.data.records && Array.isArray(res.data.records)) {
-        studentList = res.data.records;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        studentList = res.data.items;
-      } else if (Array.isArray(res.data)) {
-        studentList = res.data;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        studentList = [];
-      }
-      
-      studentOptions.value = studentList.map((student: Student) => ({
+      const studentList = Array.isArray(res.data) ? res.data : 
+                         res.data.records || [];
+      studentOptions.value = (studentList as any[]).map((student: any) => ({
         value: student.id,
         label: `${student.name} (${student.identityDocumentNumber})`
       }));
+      studentTotal.value = res.data.total || studentList.length;
     }
   } catch (error) {
     console.error('搜索学生出错:', error);
@@ -251,38 +301,53 @@ const remoteSearchStudents = async (query: string) => {
   }
 };
 
-// 加载座位数据
-const loadExamSeats = async () => {
+// 远程搜索座位
+const remoteSearchSeats = async (query: string) => {
+  seatLoading.value = true;
   try {
     const params = {
-      size: 1000,
-      status: 0 // 使用数字0表示可用状态
+      pageNum: seatPage.value,
+      pageSize: seatPageSize.value,
+      seatNumber: query
     };
     
     const res = await getExamSeatList(params);
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      let seatList: ExamSeat[] = [];
-      if (res.data.records && Array.isArray(res.data.records)) {
-        seatList = res.data.records;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        seatList = res.data.items;
-      } else if (Array.isArray(res.data)) {
-        seatList = res.data;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        seatList = [];
-      }
-      
-      seatOptions.value = seatList.map((seat: ExamSeat) => ({
+      const seatList = Array.isArray(res.data) ? res.data : 
+                      res.data.records || [];
+      seatOptions.value = (seatList as any[]).map((seat: any) => ({
         value: seat.id,
-        label: `${seat.seatNumber} - ${seat.examRoomNumber || ''} ${seat.examSiteName ? `(${seat.examSiteName})` : ''}`
+        label: seat.examRoomNumber ? `${seat.seatNumber} (${seat.examRoomNumber})` : seat.seatNumber
       }));
+      seatTotal.value = res.data.total || seatList.length;
     }
   } catch (error) {
-    console.error('加载座位数据出错:', error);
-    ElMessage.error('获取座位数据失败');
+    console.error('搜索座位出错:', error);
+  } finally {
+    seatLoading.value = false;
   }
+};
+
+// 学生分页处理
+const handleStudentSizeChange = (size: number) => {
+  studentPageSize.value = size;
+  remoteSearchStudents('');
+};
+
+const handleStudentPageChange = (page: number) => {
+  studentPage.value = page;
+  remoteSearchStudents('');
+};
+
+// 座位分页处理
+const handleSeatSizeChange = (size: number) => {
+  seatPageSize.value = size;
+  remoteSearchSeats('');
+};
+
+const handleSeatPageChange = (page: number) => {
+  seatPage.value = page;
+  remoteSearchSeats('');
 };
 
 // 加载数据
@@ -290,8 +355,8 @@ const loadData = async () => {
   loading.value = true;
   try {
     const params = {
-      current: currentPage.value,
-      size: pageSize.value,
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
       studentId: searchForm.studentId,
       examSeatId: searchForm.examSeatId,
       examType: searchForm.examType,
@@ -300,31 +365,32 @@ const loadData = async () => {
     
     const res = await getExamInfoList(params);
     if (res.code === 200) {
-      // 适配后端返回的不同数据结构
-      if (res.data.records && Array.isArray(res.data.records)) {
-        tableData.value = res.data.records;
-        total.value = res.data.total || 0;
-      } else if (res.data.items && Array.isArray(res.data.items)) {
-        tableData.value = res.data.items;
-        total.value = res.data.total || 0;
-      } else if (Array.isArray(res.data)) {
-        tableData.value = res.data;
-        total.value = res.data.length;
-      } else {
-        console.error('无法识别的数据格式:', res.data);
-        tableData.value = [];
-        total.value = 0;
-      }
-    } else {
-      ElMessage.error(res.message || '获取考试信息列表失败');
-      tableData.value = [];
-      total.value = 0;
+      const records = res.data.records || [];
+      const examInfos = await Promise.all(records.map(async (info: ExamInfo) => {
+        // 获取学生姓名
+        if (info.studentId) {
+          const studentRes = await getStudentDetail(info.studentId);
+          if (studentRes.code === 200 && studentRes.data) {
+            info.studentName = studentRes.data.name;
+          }
+        }
+        // 获取座位详细信息
+        if (info.examSeatId) {
+          const seatRes = await getExamSeatDetail(info.examSeatId);
+          if (seatRes.code === 200 && seatRes.data) {
+            info.seatNumber = seatRes.data.seatNumber;
+            info.roomNumber = seatRes.data.examRoomName;
+            info.examSiteName = seatRes.data.examSiteName;
+          }
+        }
+        return info;
+      }));
+      tableData.value = examInfos;
+      total.value = res.data.total || 0;
     }
   } catch (error) {
-    console.error('加载考试信息数据出错:', error);
-    ElMessage.error('获取考试信息列表失败');
-    tableData.value = [];
-    total.value = 0;
+    console.error('加载数据出错:', error);
+    ElMessage.error('获取数据失败');
   } finally {
     loading.value = false;
   }
@@ -360,7 +426,7 @@ const handleCurrentChange = (val: number) => {
 // 添加考试信息
 const handleAdd = () => {
   dialogType.value = 'add';
-  form.id = undefined;
+  form.id = 0;
   form.studentId = undefined;
   form.examSeatId = undefined;
   form.examTime = '';
@@ -397,8 +463,11 @@ const submitForm = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
+        // 只传递必填字段，过滤掉id为undefined的情况
+        const submitData = { ...form } as any;
+        if (!submitData.id) delete submitData.id;
         if (dialogType.value === 'add') {
-          const res = await createExamInfo(form);
+          const res = await createExamInfo(submitData);
           if (res.code === 200) {
             ElMessage.success('添加考试信息成功');
             dialogVisible.value = false;
@@ -407,7 +476,7 @@ const submitForm = async () => {
             ElMessage.error(res.message || '添加考试信息失败');
           }
         } else {
-          const res = await updateExamInfo(form);
+          const res = await updateExamInfo(submitData);
           if (res.code === 200) {
             ElMessage.success('更新考试信息成功');
             dialogVisible.value = false;
@@ -444,12 +513,109 @@ const handleDelete = async (id: number) => {
 };
 
 // 初始化
-onMounted(() => {
-  loadExamSeats();
+onMounted(async () => {
+  await Promise.all([
+    remoteSearchStudents(''),
+    remoteSearchSeats('')
+  ]);
   loadData();
 });
 </script>
 
 <style scoped>
-/* 删除局部样式，使用通用样式 */
+.exam-info-container {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-area {
+  margin-bottom: 20px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+:deep(.student-select-dropdown),
+:deep(.seat-select-dropdown) {
+  .select-footer {
+    padding: 8px;
+    text-align: center;
+    border-top: 1px solid #e4e7ed;
+  }
+  
+  .el-pagination {
+    padding: 0;
+    margin: 0;
+  }
+}
+
+:deep(.el-table) {
+  transition: all 0.3s ease-in-out;
+}
+
+:deep(.el-table__body-wrapper) {
+  transition: all 0.3s ease-in-out;
+}
+
+:deep(.el-pagination) {
+  transition: all 0.3s ease-in-out;
+}
+
+:deep(.el-table__empty-block) {
+  transition: all 0.3s ease-in-out;
+}
+
+:deep(.el-select-dropdown) {
+  .el-select-dropdown__wrap {
+    max-height: 274px;
+    overflow-y: auto;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .el-select-dropdown__list {
+    padding: 6px 0;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .el-select-dropdown__item {
+    height: 34px;
+    line-height: 34px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .select-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    z-index: 1;
+    padding: 8px;
+    text-align: center;
+    border-top: 1px solid #e4e7ed;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .el-pagination {
+    padding: 0;
+    margin: 0;
+    transition: all 0.3s ease-in-out;
+  }
+}
+
+:deep(.el-select) {
+  .el-input__wrapper {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .el-select__tags {
+    transition: all 0.3s ease-in-out;
+  }
+}
 </style> 
