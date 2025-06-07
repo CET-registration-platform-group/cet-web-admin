@@ -52,8 +52,8 @@ service.interceptors.response.use(
 
 // 封装请求方法
 const request = {
-  get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-    return service.get(url, { params }).then(res => res.data as ApiResponse<T>)
+  get<T = any>(url: string, config?: any): Promise<ApiResponse<T>> {
+    return service.get(url, config).then(res => res.data as ApiResponse<T>)
   },
   
   post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
@@ -64,8 +64,8 @@ const request = {
     return service.put(url, data).then(res => res.data as ApiResponse<T>)
   },
   
-  delete<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-    return service.delete(url, { params }).then(res => res.data as ApiResponse<T>)
+  delete<T = any>(url: string, config?: any): Promise<ApiResponse<T>> {
+    return service.delete(url, config).then(res => res.data as ApiResponse<T>)
   }
 }
 

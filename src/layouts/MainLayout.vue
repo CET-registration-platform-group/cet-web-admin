@@ -12,7 +12,9 @@ import {
   SetUp,
   ArrowDown,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Tickets,
+  Setting
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/hooks'
 import { STORAGE_KEYS, ROUTE_PATHS } from '@/constants/api'
@@ -111,9 +113,9 @@ const menuItems = [
     path: ROUTE_PATHS.STUDENTS
   },
   {
-    title: '数据分析',
-    icon: 'TrendCharts',
-    path: ROUTE_PATHS.DATA_ANALYSIS
+    title: '报名信息管理',
+    icon: 'Tickets',
+    path: ROUTE_PATHS.REGISTRATION_INFOS
   }
 ];
 </script>
@@ -172,13 +174,13 @@ const menuItems = [
             <template #title>学生管理</template>
         </el-menu-item>
           
-          <el-menu-item :index="ROUTE_PATHS.DATA_ANALYSIS">
-            <el-icon><LocationInformation /></el-icon>
-            <template #title>数据分析</template>
+        <el-menu-item :index="ROUTE_PATHS.REGISTRATION_INFOS">
+          <el-icon><Tickets /></el-icon>
+          <template #title>报名信息管理</template>
         </el-menu-item>
           
           <el-menu-item :index="ROUTE_PATHS.USERS">
-            <el-icon><User /></el-icon>
+            <el-icon><Setting /></el-icon>
             <template #title>用户管理</template>
         </el-menu-item>
       </el-menu>

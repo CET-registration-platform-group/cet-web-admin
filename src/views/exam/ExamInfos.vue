@@ -386,11 +386,12 @@ const loadData = async () => {
         return info;
       }));
       tableData.value = examInfos;
-      total.value = res.data.total || 0;
+        total.value = res.data.total || 0;
+    } else {
+      if (res.message) ElMessage.error(res.message);
     }
   } catch (error) {
     console.error('加载数据出错:', error);
-    ElMessage.error('获取数据失败');
   } finally {
     loading.value = false;
   }
@@ -459,35 +460,32 @@ const handleEdit = (row: ExamInfo) => {
 // 提交表单
 const submitForm = async () => {
   if (!formRef.value) return;
-  
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        // 只传递必填字段，过滤掉id为undefined的情况
         const submitData = { ...form } as any;
         if (!submitData.id) delete submitData.id;
         if (dialogType.value === 'add') {
           const res = await createExamInfo(submitData);
           if (res.code === 200) {
-            ElMessage.success('添加考试信息成功');
+            if (res.message) ElMessage.success(res.message);
             dialogVisible.value = false;
             loadData();
           } else {
-            ElMessage.error(res.message || '添加考试信息失败');
+            if (res.message) ElMessage.error(res.message);
           }
         } else {
           const res = await updateExamInfo(submitData);
           if (res.code === 200) {
-            ElMessage.success('更新考试信息成功');
+            if (res.message) ElMessage.success(res.message);
             dialogVisible.value = false;
             loadData();
           } else {
-            ElMessage.error(res.message || '更新考试信息失败');
+            if (res.message) ElMessage.error(res.message);
           }
         }
       } catch (error) {
-        console.error('提交表单出错:', error);
-        ElMessage.error('操作失败，请重试');
+        // 只弹后端返回的消息，不再弹固定消息
       }
     }
   });
@@ -498,17 +496,16 @@ const handleDelete = async (id: number) => {
   try {
     const res = await deleteExamInfo(id);
     if (res.code === 200) {
-      ElMessage.success('删除考试信息成功');
+      if (res.message) ElMessage.success(res.message);
       if (tableData.value.length === 1 && currentPage.value > 1) {
         currentPage.value--;
       }
       loadData();
     } else {
-      ElMessage.error(res.message || '删除考试信息失败');
+      if (res.message) ElMessage.error(res.message);
     }
   } catch (error) {
-    console.error('删除考试信息出错:', error);
-    ElMessage.error('删除考试信息失败');
+    // 只弹后端返回的消息，不再弹固定消息
   }
 };
 

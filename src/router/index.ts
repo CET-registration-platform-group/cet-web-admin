@@ -69,12 +69,12 @@ const router = createRouter({
           component: () => import('../views/exam/ExamInfos.vue'),
           meta: { title: '考试信息管理', requiresAuth: true }
         },
-        // 数据统计分析
+        // 报名信息管理
         {
-          path: ROUTE_PATHS.DATA_ANALYSIS,
-          name: ROUTE_NAMES.DATA_ANALYSIS,
-          component: () => import('../views/statistics/DataAnalysis.vue'),
-          meta: { title: '数据分析', requiresAuth: true }
+          path: ROUTE_PATHS.REGISTRATION_INFOS,
+          name: ROUTE_NAMES.REGISTRATION_INFOS,
+          component: () => import('../views/registration/RegistrationInfos.vue'),
+          meta: { title: '报名信息管理', requiresAuth: true }
         },
         // 学生管理
         {
@@ -91,8 +91,8 @@ const router = createRouter({
       name: ROUTE_NAMES.NOT_FOUND,
       component: () => import('../views/NotFound.vue'),
       meta: { title: '页面不存在', requiresAuth: false }
-        }
-      ]
+    }
+  ]
 })
 
 // 添加全局前置守卫，处理认证和授权

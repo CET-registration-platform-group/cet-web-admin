@@ -34,7 +34,7 @@ export const ROUTE_NAMES = {
   EXAM_SEATS: 'exam-seats',
   EXAM_INFOS: 'exam-infos',
   STUDENTS: 'students',
-  DATA_ANALYSIS: 'data-analysis',
+  REGISTRATION_INFOS: 'registration-infos',
   NOT_FOUND: 'not-found'
 };
 
@@ -49,7 +49,7 @@ export const ROUTE_PATHS = {
   EXAM_SEATS: '/main/exam-seats',
   EXAM_INFOS: '/main/exam-infos',
   STUDENTS: '/main/students',
-  DATA_ANALYSIS: '/main/data-analysis'
+  REGISTRATION_INFOS: '/main/registration-infos'
 };
 
 // 考点状态
