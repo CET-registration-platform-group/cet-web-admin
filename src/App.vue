@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import { StagewiseToolbar } from '@stagewise/toolbar-vue'
 import { computed } from 'vue'
-
-const stagewiseConfig = {
-  plugins: []
-}
 
 const isDev = computed(() => import.meta.env.DEV)
 </script>
 
 <template>
   <router-view />
-  <StagewiseToolbar v-if="isDev" :config="stagewiseConfig" />
 </template>
 
 <style>
